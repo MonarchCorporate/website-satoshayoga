@@ -116,6 +116,17 @@ export async function importBundle(buf: Buffer, mode: "replace" | "merge" = "rep
       counts.number_gap = Math.trunc(numberGap);
     }
     if (merge) {
+      // Password changes made on the old system during the DNS switch: apply only when the
+      // account here still has exactly the hash that was imported (never overwrite a newer change).
+      let pw = 0;
+      for (const o of authData.password_overrides ?? []) {
+        const [r] = (await conn.query(
+          "UPDATE auth_users SET encrypted_password = ?, updated_at = UTC_TIMESTAMP(6) WHERE id = ? AND encrypted_password = ?",
+          [o.encrypted_password, o.id, o.expected_current],
+        )) as any;
+        pw += Number(r?.affectedRows ?? 0);
+      }
+      counts.password_overrides_applied = pw;
       // keep yearly counters ahead of anything created on either system
       for (const ns of data.number_sequences ?? []) {
         await conn.query("UPDATE number_sequences SET last_value = GREATEST(last_value, ?) WHERE scope = ? AND year = ?", [ns.last_value, ns.scope, ns.year]);
