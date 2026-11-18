@@ -1,0 +1,4933 @@
+{
+ "tables": {
+  "bookings": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "status": {
+     "type": "enum",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "confirmed"
+     }
+    },
+    "payment_method": {
+     "type": "enum",
+     "nullable": true,
+     "default": null
+    },
+    "payment_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "amount_paid": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "paid_with_card": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "card_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "refunded": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "voucher_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "voucher_code": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "discount_amount": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "order_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "bookings_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "bookings_order_id_fkey",
+     "columns": [
+      "order_id"
+     ],
+     "refTable": "orders",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "bookings_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "bookings_voucher_id_fkey",
+     "columns": [
+      "voucher_id"
+     ],
+     "refTable": "vouchers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_bookings_user",
+     "columns": [
+      "user_id"
+     ]
+    },
+    {
+     "name": "idx_bookings_course",
+     "columns": [
+      "course_id"
+     ]
+    },
+    {
+     "name": "idx_bookings_order",
+     "columns": [
+      "order_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Users can view own bookings",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": null
+    },
+    {
+     "name": "Users can create own bookings",
+     "cmd": "INSERT",
+     "roles": [
+      "public"
+     ],
+     "using": null,
+     "check": "(@uid = user_id)"
+    },
+    {
+     "name": "Admins can manage all bookings",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Staff can view all bookings",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_staff = 1)",
+     "check": null
+    },
+    {
+     "name": "Trainers can view own course bookings",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(EXISTS ( SELECT 1 FROM courses c WHERE ((c.id = bookings.course_id) AND (c.instructor_id = @trainer_id))))",
+     "check": null
+    },
+    {
+     "name": "Users can update own bookings",
+     "cmd": "UPDATE",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": "(@uid = user_id)"
+    }
+   ]
+  },
+  "cart_items": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "card_type": {
+     "type": "enum",
+     "nullable": true,
+     "default": null
+    },
+    "quantity": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 1
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "product_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "cart_items_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "cart_items_product_id_fkey",
+     "columns": [
+      "product_id"
+     ],
+     "refTable": "products",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "cart_items_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Users can manage own cart",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": "(@uid = user_id)"
+    }
+   ]
+  },
+  "class_cards": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "card_type": {
+     "type": "enum",
+     "nullable": false,
+     "default": null
+    },
+    "total_credits": {
+     "type": "int",
+     "nullable": false,
+     "default": null
+    },
+    "remaining_credits": {
+     "type": "int",
+     "nullable": false,
+     "default": null
+    },
+    "payment_method": {
+     "type": "enum",
+     "nullable": true,
+     "default": null
+    },
+    "payment_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "amount_paid": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "purchased_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "expires_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "granted_by": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "grant_note": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "status": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "active"
+     }
+    },
+    "cancelled_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "cancelled_by": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "cancel_reason": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "order_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "class_cards_order_id_fkey",
+     "columns": [
+      "order_id"
+     ],
+     "refTable": "orders",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "class_cards_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_class_cards_user",
+     "columns": [
+      "user_id"
+     ]
+    },
+    {
+     "name": "idx_class_cards_status",
+     "columns": [
+      "status"
+     ]
+    },
+    {
+     "name": "idx_class_cards_order",
+     "columns": [
+      "order_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Users can view own cards",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": null
+    },
+    {
+     "name": "Users can create own cards",
+     "cmd": "INSERT",
+     "roles": [
+      "public"
+     ],
+     "using": null,
+     "check": "(@uid = user_id)"
+    },
+    {
+     "name": "Admins can manage all cards",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "company_settings": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "singleton": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "company_name": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "Santosha Yoga by Tessa"
+     }
+    },
+    "owner_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "street": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "postal_code": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "city": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "country": {
+     "type": "text",
+     "nullable": true,
+     "default": {
+      "kind": "literal",
+      "value": "Deutschland"
+     }
+    },
+    "email": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "phone": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "website": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "tax_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "tax_number": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "bank_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "iban": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "bic": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "invoice_footer": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "logo_url": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "invoice_payment_days": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 14
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "singleton"
+    ]
+   ],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Admins can view company settings",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Admins can insert company settings",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Admins can update company settings",
+     "cmd": "UPDATE",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "course_templates": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "course_type_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "title": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "instructor_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "day_of_week": {
+     "type": "int",
+     "nullable": false,
+     "default": null
+    },
+    "start_time_of_day": {
+     "type": "time",
+     "nullable": false,
+     "default": null
+    },
+    "duration_minutes": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 60
+     }
+    },
+    "max_participants": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 12
+     }
+    },
+    "price": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "is_active": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "end_date": {
+     "type": "date",
+     "nullable": true,
+     "default": null
+    },
+    "direct_trainer_booking": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "course_templates_course_type_id_fkey",
+     "columns": [
+      "course_type_id"
+     ],
+     "refTable": "course_types",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "course_templates_instructor_id_fkey",
+     "columns": [
+      "instructor_id"
+     ],
+     "refTable": "trainers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Admins can manage templates",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Anyone can view active templates",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(is_active = true)",
+     "check": null
+    },
+    {
+     "name": "Trainers can manage own templates",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "((instructor_id IS NOT NULL) AND (@trainer_id IS NOT NULL) AND (instructor_id = @trainer_id))",
+     "check": "((instructor_id IS NOT NULL) AND (@trainer_id IS NOT NULL) AND (instructor_id = @trainer_id))"
+    }
+   ]
+  },
+  "course_types": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "name": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "color": {
+     "type": "text",
+     "nullable": true,
+     "default": {
+      "kind": "literal",
+      "value": "#C8A97E"
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "image_url": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Anyone can view course types",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "true",
+     "check": null
+    },
+    {
+     "name": "Admins can manage course types",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Public can view course types",
+     "cmd": "SELECT",
+     "roles": [
+      "anon"
+     ],
+     "using": "true",
+     "check": null
+    }
+   ]
+  },
+  "courses": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "course_type_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "title": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "instructor_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "start_time": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": null
+    },
+    "end_time": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": null
+    },
+    "max_participants": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 12
+     }
+    },
+    "price": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "is_cancelled": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "series_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "image_url": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "color": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "location": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "is_visible": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "booking_opens_immediately": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "booking_closes_at_start": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "min_participants": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "co_instructor_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "internal_notes": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "course_no": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "booking_opens_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "class_cards_allowed": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "direct_trainer_booking": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "courses_course_type_id_fkey",
+     "columns": [
+      "course_type_id"
+     ],
+     "refTable": "course_types",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "courses_instructor_id_fkey",
+     "columns": [
+      "instructor_id"
+     ],
+     "refTable": "trainers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_courses_start_time",
+     "columns": [
+      "start_time"
+     ]
+    },
+    {
+     "name": "idx_courses_course_type",
+     "columns": [
+      "course_type_id"
+     ]
+    },
+    {
+     "name": "idx_courses_series_id",
+     "columns": [
+      "series_id"
+     ]
+    },
+    {
+     "name": "idx_courses_instructor_id",
+     "columns": [
+      "instructor_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins can manage courses",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Trainers can insert own courses",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "((instructor_id IS NOT NULL) AND (instructor_id = @trainer_id))"
+    },
+    {
+     "name": "Trainers can delete own courses",
+     "cmd": "DELETE",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(instructor_id = @trainer_id)",
+     "check": null
+    },
+    {
+     "name": "Public can view visible courses",
+     "cmd": "SELECT",
+     "roles": [
+      "anon",
+      "authenticated"
+     ],
+     "using": "((is_visible = true) AND (is_cancelled = false))",
+     "check": null
+    },
+    {
+     "name": "Users can view courses they booked",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "EXISTS (SELECT 1 FROM bookings _b WHERE _b.user_id = @uid AND _b.course_id = courses.id)",
+     "check": null
+    },
+    {
+     "name": "Trainers can update own courses",
+     "cmd": "UPDATE",
+     "roles": [
+      "public"
+     ],
+     "using": "(instructor_id = @trainer_id)",
+     "check": "(instructor_id = @trainer_id)"
+    }
+   ]
+  },
+  "email_send_log": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "trigger_key": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "recipient_email": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "subject": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "body_html": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "status": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "pending"
+     }
+    },
+    "error_message": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "source": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "transactional"
+     }
+    },
+    "metadata": {
+     "type": "json",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": {}
+     }
+    },
+    "sent_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "delivered_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [
+    {
+     "name": "idx_email_send_log_created_at",
+     "columns": [
+      "created_at"
+     ]
+    },
+    {
+     "name": "idx_email_send_log_status",
+     "columns": [
+      "status"
+     ]
+    },
+    {
+     "name": "idx_email_send_log_source",
+     "columns": [
+      "source"
+     ]
+    },
+    {
+     "name": "idx_email_send_log_recipient",
+     "columns": [
+      "recipient_email"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins can view email log",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "email_settings": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "domain": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "from_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "from_email": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "reply_to": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "smtp_host": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "smtp_port": {
+     "type": "int",
+     "nullable": true,
+     "default": {
+      "kind": "literal",
+      "value": 587
+     }
+    },
+    "smtp_user": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "smtp_pass": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "smtp_secure": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "starttls"
+     }
+    },
+    "is_active": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins manage email_settings",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "email_templates": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "name": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "subject": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "body_html": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "trigger_key": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "is_active": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "name"
+    ],
+    [
+     "trigger_key"
+    ]
+   ],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Admins can manage email templates",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "newsletter_bounces": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "email": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "bounce_type": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "reason": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "campaign_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "newsletter_bounces_campaign_id_fkey",
+     "columns": [
+      "campaign_id"
+     ],
+     "refTable": "newsletter_campaigns",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins read bounces",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "newsletter_campaigns": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "subject": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "preheader": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "content_json": {
+     "type": "json",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": []
+     }
+    },
+    "html_cached": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "status": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "draft"
+     }
+    },
+    "scheduled_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "sent_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "audience_filter": {
+     "type": "json",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": {
+       "type": "opt_in"
+      }
+     }
+    },
+    "created_by": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins manage campaigns",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "newsletter_clicks": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "recipient_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "link_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "clicked_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "ip": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "user_agent": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "newsletter_clicks_link_id_fkey",
+     "columns": [
+      "link_id"
+     ],
+     "refTable": "newsletter_links",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "newsletter_clicks_recipient_id_fkey",
+     "columns": [
+      "recipient_id"
+     ],
+     "refTable": "newsletter_recipients",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_newsletter_clicks_recipient",
+     "columns": [
+      "recipient_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "admins read clicks",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "newsletter_links": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "campaign_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "url": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "label": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "newsletter_links_campaign_id_fkey",
+     "columns": [
+      "campaign_id"
+     ],
+     "refTable": "newsletter_campaigns",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins read links",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "newsletter_recipients": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "campaign_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "email": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "status": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "pending"
+     }
+    },
+    "sent_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "opened_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "open_count": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "last_clicked_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "click_count": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "error": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "campaign_id",
+     "email"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "newsletter_recipients_campaign_id_fkey",
+     "columns": [
+      "campaign_id"
+     ],
+     "refTable": "newsletter_campaigns",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_newsletter_recipients_campaign",
+     "columns": [
+      "campaign_id"
+     ]
+    },
+    {
+     "name": "idx_newsletter_recipients_user",
+     "columns": [
+      "user_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "admins manage recipients",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "newsletter_settings": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "smtp_host": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "smtp_port": {
+     "type": "int",
+     "nullable": true,
+     "default": {
+      "kind": "literal",
+      "value": 587
+     }
+    },
+    "smtp_user": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "smtp_pass": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "smtp_secure": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "starttls"
+     }
+    },
+    "from_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "from_email": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "reply_to": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "footer_text": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "footer_address": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "rate_per_minute": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 60
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins manage newsletter_settings",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "newsletter_suppressions": {
+   "columns": {
+    "email": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "reason": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "email"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins read suppressions",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "newsletter_templates": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "name": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "content_json": {
+     "type": "json",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": []
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins manage templates",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "newsletter_unsubscribe_tokens": {
+   "columns": {
+    "email": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "token": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "email"
+   ],
+   "unique": [
+    [
+     "token"
+    ]
+   ],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "admins read tokens",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "number_sequences": {
+   "columns": {
+    "scope": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "year": {
+     "type": "int",
+     "nullable": false,
+     "default": null
+    },
+    "last_value": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    }
+   },
+   "pk": [
+    "scope",
+    "year"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Admins can manage sequences",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "order_items": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "order_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "product_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "item_type": {
+     "type": "enum",
+     "nullable": false,
+     "default": null
+    },
+    "name": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "quantity": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 1
+     }
+    },
+    "unit_price": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "tax_rate": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 19
+     }
+    },
+    "line_total": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "order_items_order_id_fkey",
+     "columns": [
+      "order_id"
+     ],
+     "refTable": "orders",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "order_items_product_id_fkey",
+     "columns": [
+      "product_id"
+     ],
+     "refTable": "products",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_order_items_order_id",
+     "columns": [
+      "order_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Users can view items of own orders",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(EXISTS ( SELECT 1 FROM orders o WHERE ((o.id = order_items.order_id) AND (o.user_id = @uid))))",
+     "check": null
+    },
+    {
+     "name": "Users can insert items into own orders",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "(EXISTS ( SELECT 1 FROM orders o WHERE ((o.id = order_items.order_id) AND (o.user_id = @uid))))"
+    },
+    {
+     "name": "Admins manage all order items",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Staff can view all order items",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_staff = 1)",
+     "check": null
+    }
+   ]
+  },
+  "orders": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "order_number": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "status": {
+     "type": "enum",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "pending"
+     }
+    },
+    "subtotal": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "tax_total": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "total": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "payment_method": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "payment_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "paid_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "billing_first_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "billing_last_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "billing_email": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "billing_phone": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "billing_street": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "billing_postal_code": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "billing_city": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "billing_country": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "invoice_number": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "invoice_pdf_path": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "invoice_issued_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "notes": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "voucher_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "voucher_code": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "discount_amount": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "card_assignments": {
+     "type": "json",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "invoice_number"
+    ],
+    [
+     "order_number"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "orders_voucher_id_fkey",
+     "columns": [
+      "voucher_id"
+     ],
+     "refTable": "vouchers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Users can view own orders",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@uid = user_id)",
+     "check": null
+    },
+    {
+     "name": "Users can create own orders",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "(@uid = user_id)"
+    },
+    {
+     "name": "Admins manage all orders",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Staff can view all orders",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_staff = 1)",
+     "check": null
+    }
+   ]
+  },
+  "payment_settings": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "provider": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "mode": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "sandbox"
+     }
+    },
+    "client_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "client_secret": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "webhook_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "is_active": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "provider"
+    ]
+   ],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Admins can view payment settings",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Admins can insert payment settings",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Admins can update payment settings",
+     "cmd": "UPDATE",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "products": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "name": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "image_url": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "kind": {
+     "type": "enum",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "physical"
+     }
+    },
+    "price": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "tax_rate": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 19
+     }
+    },
+    "stock": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "sku": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "is_active": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "sort_order": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "card_credits": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "card_validity_days": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Anyone can view active products",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(is_active = true)",
+     "check": null
+    },
+    {
+     "name": "Admins can manage products",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Anon can view active products",
+     "cmd": "SELECT",
+     "roles": [
+      "anon"
+     ],
+     "using": "(is_active = true)",
+     "check": null
+    }
+   ]
+  },
+  "profiles": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "first_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "last_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "phone": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "birthday": {
+     "type": "date",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "email": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "street": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "postal_code": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "city": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "country": {
+     "type": "text",
+     "nullable": true,
+     "default": {
+      "kind": "literal",
+      "value": "Deutschland"
+     }
+    },
+    "newsletter_opt_in": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "is_guest": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "user_id"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "profiles_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Users can view own profile",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": null
+    },
+    {
+     "name": "Admins can view all profiles",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Staff can view all profiles",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_staff = 1)",
+     "check": null
+    },
+    {
+     "name": "Trainers can view profiles of their bookings",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(EXISTS ( SELECT 1 FROM (bookings b JOIN courses c ON ((c.id = b.course_id))) WHERE ((b.user_id = profiles.user_id) AND (c.instructor_id = @trainer_id))))",
+     "check": null
+    },
+    {
+     "name": "Admins can update all profiles",
+     "cmd": "UPDATE",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Admins can insert profiles",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Users can update own profile",
+     "cmd": "UPDATE",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": "(@uid = user_id)"
+    }
+   ]
+  },
+  "trainer_compensation_tiers": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "trainer_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "course_type_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "min_participants": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "max_participants": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 9
+     }
+    },
+    "amount": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "trainer_compensation_tiers_course_type_id_fkey",
+     "columns": [
+      "course_type_id"
+     ],
+     "refTable": "course_types",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "trainer_compensation_tiers_trainer_id_fkey",
+     "columns": [
+      "trainer_id"
+     ],
+     "refTable": "trainers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_tiers_trainer",
+     "columns": [
+      "trainer_id",
+      "course_type_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins manage tiers",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Trainers view own tiers",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(trainer_id = @trainer_id)",
+     "check": null
+    }
+   ]
+  },
+  "trainer_earnings": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "trainer_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "course_date": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": null
+    },
+    "participants_count": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "tier_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "amount": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "status": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "pending"
+     }
+    },
+    "payout_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "trainer_id",
+     "course_id"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "trainer_earnings_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "trainer_earnings_payout_id_fkey",
+     "columns": [
+      "payout_id"
+     ],
+     "refTable": "trainer_payouts",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "trainer_earnings_tier_id_fkey",
+     "columns": [
+      "tier_id"
+     ],
+     "refTable": "trainer_compensation_tiers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "trainer_earnings_trainer_id_fkey",
+     "columns": [
+      "trainer_id"
+     ],
+     "refTable": "trainers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_earnings_trainer_status",
+     "columns": [
+      "trainer_id",
+      "status"
+     ]
+    },
+    {
+     "name": "idx_earnings_payout",
+     "columns": [
+      "payout_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins manage earnings",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Trainers view own earnings",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(trainer_id = @trainer_id)",
+     "check": null
+    }
+   ]
+  },
+  "trainer_payouts": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "payout_number": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "trainer_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "period_start": {
+     "type": "date",
+     "nullable": false,
+     "default": null
+    },
+    "period_end": {
+     "type": "date",
+     "nullable": false,
+     "default": null
+    },
+    "status": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "requested"
+     }
+    },
+    "subtotal": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "vat_rate": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "vat_amount": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "total": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "pdf_path": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "trainer_snapshot": {
+     "type": "json",
+     "nullable": true,
+     "default": null
+    },
+    "note": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "requested_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "approved_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "approved_by": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "trainer_payouts_trainer_id_fkey",
+     "columns": [
+      "trainer_id"
+     ],
+     "refTable": "trainers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "RESTRICT"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_payouts_trainer",
+     "columns": [
+      "trainer_id",
+      "status"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins manage payouts",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Trainers view own payouts",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(trainer_id = @trainer_id)",
+     "check": null
+    },
+    {
+     "name": "Trainers create own payouts",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "(trainer_id = @trainer_id)"
+    }
+   ]
+  },
+  "trainers": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "first_name": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "last_name": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "email": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "phone": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "bio": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "is_active": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "street": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "postal_code": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "city": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "country": {
+     "type": "text",
+     "nullable": true,
+     "default": {
+      "kind": "literal",
+      "value": "Deutschland"
+     }
+    },
+    "tax_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "tax_number": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "iban": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "bic": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "bank_name": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "is_small_business": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "invited_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "onboarded_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "onboarding_dismissed": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "trainers_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Admins can manage trainers",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    },
+    {
+     "name": "Staff can view trainers",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_staff = 1)",
+     "check": null
+    },
+    {
+     "name": "Trainers can view own record",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(user_id = @uid)",
+     "check": null
+    },
+    {
+     "name": "Trainers can update own record",
+     "cmd": "UPDATE",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(user_id = @uid)",
+     "check": "(user_id = @uid)"
+    }
+   ]
+  },
+  "user_roles": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "role": {
+     "type": "enum",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "customer"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "user_id",
+     "role"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "user_roles_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Users can view own roles",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": null
+    },
+    {
+     "name": "Admins can manage all roles",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": null
+    }
+   ]
+  },
+  "video_course_access": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "access_type": {
+     "type": "enum",
+     "nullable": false,
+     "default": null
+    },
+    "status": {
+     "type": "enum",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "active"
+     }
+    },
+    "current_period_end": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "grace_until": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "paypal_subscription_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "paypal_order_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "last_payment_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "cancelled_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "order_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "user_id",
+     "course_id"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "video_course_access_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "video_courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "video_course_access_order_id_fkey",
+     "columns": [
+      "order_id"
+     ],
+     "refTable": "orders",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "video_course_access_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_video_course_access_user",
+     "columns": [
+      "user_id"
+     ]
+    },
+    {
+     "name": "idx_video_course_access_order",
+     "columns": [
+      "order_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Users read own access",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "((@uid = user_id) OR (@role_admin = 1))",
+     "check": null
+    },
+    {
+     "name": "Admins manage access",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "video_course_payments": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "access_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "provider_event_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "amount": {
+     "type": "numeric",
+     "nullable": true,
+     "default": null
+    },
+    "currency": {
+     "type": "text",
+     "nullable": true,
+     "default": {
+      "kind": "literal",
+      "value": "EUR"
+     }
+    },
+    "event_type": {
+     "type": "enum",
+     "nullable": false,
+     "default": null
+    },
+    "paid_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "raw_payload": {
+     "type": "json",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "video_course_payments_access_id_fkey",
+     "columns": [
+      "access_id"
+     ],
+     "refTable": "video_course_access",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "video_course_payments_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "video_courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "video_course_payments_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Users read own video payments",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "((@uid = user_id) OR (@role_admin = 1))",
+     "check": null
+    }
+   ]
+  },
+  "video_course_voucher_plans": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "voucher_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "interval_unit": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "discount_percent": {
+     "type": "numeric",
+     "nullable": false,
+     "default": null
+    },
+    "paypal_plan_id": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "course_id",
+     "voucher_id",
+     "interval_unit",
+     "discount_percent"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "video_course_voucher_plans_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "video_courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "video_course_voucher_plans_voucher_id_fkey",
+     "columns": [
+      "voucher_id"
+     ],
+     "refTable": "vouchers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "service role only",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "false",
+     "check": "false"
+    }
+   ]
+  },
+  "video_courses": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "title": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "slug": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "cover_image_url": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "is_published": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "access_model": {
+     "type": "enum",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "one_time"
+     }
+    },
+    "price_once": {
+     "type": "numeric",
+     "nullable": true,
+     "default": null
+    },
+    "price_monthly": {
+     "type": "numeric",
+     "nullable": true,
+     "default": null
+    },
+    "price_yearly": {
+     "type": "numeric",
+     "nullable": true,
+     "default": null
+    },
+    "grace_days": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 7
+     }
+    },
+    "sort_order": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "paypal_plan_monthly_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "paypal_plan_yearly_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "paypal_product_id": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "slug"
+    ]
+   ],
+   "fks": [],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Public can read published video courses",
+     "cmd": "SELECT",
+     "roles": [
+      "public"
+     ],
+     "using": "((is_published = true) OR (@role_admin = 1))",
+     "check": null
+    },
+    {
+     "name": "Admins manage video courses",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  },
+  "video_lesson_progress": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "lesson_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "seconds_watched": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "completed_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "user_id",
+     "lesson_id"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "video_lesson_progress_lesson_id_fkey",
+     "columns": [
+      "lesson_id"
+     ],
+     "refTable": "video_lessons",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "video_lesson_progress_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Users manage own progress",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@uid = user_id)",
+     "check": "(@uid = user_id)"
+    }
+   ]
+  },
+  "video_lessons": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "title": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "provider": {
+     "type": "enum",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "vimeo"
+     }
+    },
+    "video_id": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "duration_seconds": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "sort_order": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "is_free_preview": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "video_lessons_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "video_courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_video_lessons_course",
+     "columns": [
+      "course_id",
+      "sort_order"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins manage video lessons",
+     "cmd": "ALL",
+     "roles": [
+      "public"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Users with active access can view lessons",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "((is_free_preview = true) OR EXISTS (SELECT 1 FROM video_course_access _a WHERE _a.user_id = @uid AND _a.course_id = video_lessons.course_id AND (_a.status = 'active' OR (_a.status = 'grace' AND _a.grace_until IS NOT NULL AND _a.grace_until > @now) OR (_a.status = 'cancelled' AND _a.current_period_end IS NOT NULL AND _a.current_period_end > @now))))",
+     "check": null
+    }
+   ]
+  },
+  "voucher_redemptions": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "voucher_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "order_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "booking_id": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "discount_amount": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "redeemed_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "voucher_redemptions_booking_id_fkey",
+     "columns": [
+      "booking_id"
+     ],
+     "refTable": "bookings",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "voucher_redemptions_order_id_fkey",
+     "columns": [
+      "order_id"
+     ],
+     "refTable": "orders",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    },
+    {
+     "name": "voucher_redemptions_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "voucher_redemptions_voucher_id_fkey",
+     "columns": [
+      "voucher_id"
+     ],
+     "refTable": "vouchers",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "voucher_redemptions_voucher_idx",
+     "columns": [
+      "voucher_id"
+     ]
+    },
+    {
+     "name": "voucher_redemptions_user_idx",
+     "columns": [
+      "user_id"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins manage redemptions",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Users view own redemptions",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(user_id = @uid)",
+     "check": null
+    }
+   ]
+  },
+  "vouchers": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "code": {
+     "type": "text",
+     "nullable": false,
+     "default": null
+    },
+    "description": {
+     "type": "text",
+     "nullable": true,
+     "default": null
+    },
+    "discount_percent": {
+     "type": "numeric",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "applies_to": {
+     "type": "text[]",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": [
+       "all"
+      ]
+     }
+    },
+    "product_ids": {
+     "type": "uuid[]",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": []
+     }
+    },
+    "course_type_ids": {
+     "type": "uuid[]",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": []
+     }
+    },
+    "class_card_types": {
+     "type": "text[]",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": []
+     }
+    },
+    "valid_from": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "valid_until": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "max_total_uses": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "max_uses_per_customer": {
+     "type": "int",
+     "nullable": true,
+     "default": null
+    },
+    "is_single_use": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": false
+     }
+    },
+    "is_active": {
+     "type": "bool",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": true
+     }
+    },
+    "times_used": {
+     "type": "int",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": 0
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "created_by": {
+     "type": "uuid",
+     "nullable": true,
+     "default": null
+    },
+    "video_course_ids": {
+     "type": "uuid[]",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": []
+     }
+    },
+    "discount_amount_fixed": {
+     "type": "numeric",
+     "nullable": true,
+     "default": null
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [],
+   "fks": [
+    {
+     "name": "vouchers_created_by_fkey",
+     "columns": [
+      "created_by"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "SET NULL"
+    }
+   ],
+   "indexes": [],
+   "policies": [
+    {
+     "name": "Admins manage vouchers",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    }
+   ]
+  }
+ },
+ "views": {
+  "public_trainers": {
+   "sql": "SELECT id, first_name, last_name FROM trainers WHERE is_active = 1",
+   "columns": {
+    "id": "uuid",
+    "first_name": "text",
+    "last_name": "text"
+   }
+  },
+  "video_lessons_public": {
+   "sql": "SELECT l.id, l.course_id, l.title, l.description, l.provider, l.duration_seconds, l.sort_order, l.is_free_preview, l.created_at FROM video_lessons l JOIN video_courses c ON c.id = l.course_id WHERE c.is_published = 1 OR @role_admin = 1",
+   "columns": {
+    "id": "uuid",
+    "course_id": "uuid",
+    "title": "text",
+    "description": "text",
+    "provider": "enum",
+    "duration_seconds": "int",
+    "sort_order": "int",
+    "is_free_preview": "bool",
+    "created_at": "timestamptz"
+   }
+  }
+ },
+ "storagePolicies": [
+  {
+   "name": "Product images public read",
+   "cmd": "SELECT",
+   "roles": [
+    "public"
+   ],
+   "using": "(bucket_id = 'product-images')",
+   "check": null
+  },
+  {
+   "name": "Admins upload product images",
+   "cmd": "INSERT",
+   "roles": [
+    "authenticated"
+   ],
+   "using": null,
+   "check": "((bucket_id = 'product-images') AND (@role_admin = 1))"
+  },
+  {
+   "name": "Admins update product images",
+   "cmd": "UPDATE",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'product-images') AND (@role_admin = 1))",
+   "check": null
+  },
+  {
+   "name": "Admins delete product images",
+   "cmd": "DELETE",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'product-images') AND (@role_admin = 1))",
+   "check": null
+  },
+  {
+   "name": "Admins read invoices",
+   "cmd": "SELECT",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'invoices') AND (@role_admin = 1))",
+   "check": null
+  },
+  {
+   "name": "Course images are publicly viewable",
+   "cmd": "SELECT",
+   "roles": [
+    "public"
+   ],
+   "using": "(bucket_id = 'course-images')",
+   "check": null
+  },
+  {
+   "name": "Admins and trainers can upload course images",
+   "cmd": "INSERT",
+   "roles": [
+    "public"
+   ],
+   "using": null,
+   "check": "((bucket_id = 'course-images') AND ((@role_admin = 1) OR (@trainer_id IS NOT NULL)))"
+  },
+  {
+   "name": "Admins and trainers can update course images",
+   "cmd": "UPDATE",
+   "roles": [
+    "public"
+   ],
+   "using": "((bucket_id = 'course-images') AND ((@role_admin = 1) OR (@trainer_id IS NOT NULL)))",
+   "check": null
+  },
+  {
+   "name": "Admins can delete course images",
+   "cmd": "DELETE",
+   "roles": [
+    "public"
+   ],
+   "using": "((bucket_id = 'course-images') AND (@role_admin = 1))",
+   "check": null
+  },
+  {
+   "name": "Branding is publicly accessible",
+   "cmd": "SELECT",
+   "roles": [
+    "public"
+   ],
+   "using": "(bucket_id = 'branding')",
+   "check": null
+  },
+  {
+   "name": "Admins can upload branding",
+   "cmd": "INSERT",
+   "roles": [
+    "authenticated"
+   ],
+   "using": null,
+   "check": "((bucket_id = 'branding') AND (@role_admin = 1))"
+  },
+  {
+   "name": "Admins can update branding",
+   "cmd": "UPDATE",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'branding') AND (@role_admin = 1))",
+   "check": null
+  },
+  {
+   "name": "Admins can delete branding",
+   "cmd": "DELETE",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'branding') AND (@role_admin = 1))",
+   "check": null
+  },
+  {
+   "name": "Admins manage trainer-payouts files",
+   "cmd": "ALL",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'trainer-payouts') AND (@role_admin = 1))",
+   "check": "((bucket_id = 'trainer-payouts') AND (@role_admin = 1))"
+  },
+  {
+   "name": "Trainers read own payout files",
+   "cmd": "SELECT",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'trainer-payouts') AND (EXISTS ( SELECT 1 FROM trainer_payouts p WHERE ((p.pdf_path = objects.name) AND (p.trainer_id = @trainer_id)))))",
+   "check": null
+  },
+  {
+   "name": "Users can read own invoices",
+   "cmd": "SELECT",
+   "roles": [
+    "authenticated"
+   ],
+   "using": "((bucket_id = 'invoices') AND (EXISTS ( SELECT 1 FROM orders o WHERE ((o.invoice_pdf_path = objects.name) AND (o.user_id = @uid)))))",
+   "check": null
+  }
+ ],
+ "tableOrder": [
+  "course_types",
+  "trainers",
+  "courses",
+  "vouchers",
+  "orders",
+  "bookings",
+  "products",
+  "cart_items",
+  "class_cards",
+  "company_settings",
+  "course_templates",
+  "email_send_log",
+  "email_settings",
+  "email_templates",
+  "newsletter_campaigns",
+  "newsletter_bounces",
+  "newsletter_links",
+  "newsletter_recipients",
+  "newsletter_clicks",
+  "newsletter_settings",
+  "newsletter_suppressions",
+  "newsletter_templates",
+  "newsletter_unsubscribe_tokens",
+  "number_sequences",
+  "order_items",
+  "payment_settings",
+  "profiles",
+  "trainer_compensation_tiers",
+  "trainer_payouts",
+  "trainer_earnings",
+  "user_roles",
+  "video_courses",
+  "video_course_access",
+  "video_course_payments",
+  "video_course_voucher_plans",
+  "video_lessons",
+  "video_lesson_progress",
+  "voucher_redemptions"
+ ]
+}

@@ -1,0 +1,12 @@
+node_modules
+dist
+server-dist
+*.local
+.env
+.env.*
+!.env.example
+*.enc
+santosha-storage
+logs
+*.log
+.DS_Store
