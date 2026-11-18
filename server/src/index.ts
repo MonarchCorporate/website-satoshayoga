@@ -239,7 +239,14 @@ app.delete("/storage/v1/object/:bucket", authJson, async (req, res) => {
 // ---------------------------------------------------------------------------
 // Server functions (ported Supabase edge functions)
 // ---------------------------------------------------------------------------
+// Functions that are only ever called server-side (with the internal service key).
+// send-email-smtp would otherwise be an open relay for the studio's mailbox.
+const INTERNAL_ONLY_FUNCTIONS = new Set(["send-email-smtp"]);
+
 app.all("/functions/v1/:name", express.raw({ type: () => true, limit: "25mb" }), wrap(async (req, res) => {
+  if (INTERNAL_ONLY_FUNCTIONS.has(req.params.name) && bearer(req) !== config.serviceKey) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {
     if (v === undefined) continue;
