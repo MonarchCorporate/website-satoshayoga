@@ -189,7 +189,7 @@ export async function importFromFileIfPresent() {
     console.log(`[import] found ${f}, importing…`);
     let result: Record<string, unknown>;
     try {
-      result = { ok: true, counts: await importBundle(fs.readFileSync(f)) };
+      result = { ok: true, counts: await importBundle(fs.readFileSync(f), "replace", Number(process.env.IMPORT_NUMBER_GAP ?? 20) || 0) };
     } catch (e: any) {
       result = { ok: false, error: e?.message ?? String(e) };
     } finally {
