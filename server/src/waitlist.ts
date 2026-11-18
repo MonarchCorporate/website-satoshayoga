@@ -146,8 +146,19 @@ export async function ensureWaitlistTemplate() {
   const def = EMAIL_TRIGGERS.find((t) => t.trigger_key === TRIGGER);
   if (!def) return;
   const db = admin();
-  const { data } = await db.from("email_templates").select("id").eq("trigger_key", TRIGGER).maybeSingle();
-  if (data) return;
+  const { data } = await db.from("email_templates").select("id, body_html").eq("trigger_key", TRIGGER).maybeSingle();
+  if (data) {
+    // One-time fix: the first version of this template linked the old domain in its footer.
+    const body = (data as any).body_html as string | null;
+    if (body && body.includes("santosha-yoga.de")) {
+      const fixed = body
+        .split("https://santosha-yoga.de").join("https://yoga-heide.de")
+        .split(">santosha-yoga.de<").join(">yoga-heide.de<");
+      await db.from("email_templates").update({ body_html: fixed }).eq("id", (data as any).id);
+      console.log("[waitlist] e-mail template footer link updated to yoga-heide.de");
+    }
+    return;
+  }
   const { error } = await db.from("email_templates").insert({
     name: def.display_name,
     trigger_key: TRIGGER,

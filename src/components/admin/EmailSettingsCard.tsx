@@ -195,7 +195,7 @@ export default function EmailSettingsCard() {
                 <Input
                   value={cfg.domain}
                   onChange={(e) => setCfg({ ...cfg, domain: e.target.value })}
-                  placeholder="santosha-yoga.de"
+                  placeholder="yoga-heide.de"
                 />
                 <p className="text-xs text-muted-foreground">
                   Nur informativ – für SPF/DKIM sorgt dein Hoster.
@@ -215,7 +215,7 @@ export default function EmailSettingsCard() {
                   type="email"
                   value={cfg.from_email}
                   onChange={(e) => setCfg({ ...cfg, from_email: e.target.value })}
-                  placeholder="hallo@santosha-yoga.de"
+                  placeholder="info@yoga-heide.de"
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -224,7 +224,7 @@ export default function EmailSettingsCard() {
                   type="email"
                   value={cfg.reply_to}
                   onChange={(e) => setCfg({ ...cfg, reply_to: e.target.value })}
-                  placeholder="tessa@santosha-yoga.de"
+                  placeholder="tessa@yoga-heide.de"
                 />
               </div>
             </div>
@@ -254,7 +254,7 @@ export default function EmailSettingsCard() {
                     value={cfg.smtp_user}
                     onChange={(e) => setCfg({ ...cfg, smtp_user: e.target.value })}
                     autoComplete="off"
-                    placeholder="hallo@santosha-yoga.de"
+                    placeholder="info@yoga-heide.de"
                   />
                 </div>
                 <div className="space-y-2">

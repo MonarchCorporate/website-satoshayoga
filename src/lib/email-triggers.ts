@@ -30,7 +30,7 @@ const wrap = (innerHtml: string) => `
         </td></tr>
         <tr><td style="background:#faf6ef;padding:24px 40px;text-align:center;color:#888;font-size:12px;border-top:1px solid #ece4d4;">
           Mit Liebe gesendet von Tessa & dem Santosha-Team<br/>
-          <a href="https://santosha-yoga.de" style="color:#C8A97E;text-decoration:none;">santosha-yoga.de</a>
+          <a href="https://yoga-heide.de" style="color:#C8A97E;text-decoration:none;">yoga-heide.de</a>
         </td></tr>
       </table>
     </td></tr>

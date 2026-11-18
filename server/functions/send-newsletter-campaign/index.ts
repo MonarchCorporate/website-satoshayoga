@@ -126,7 +126,7 @@ export default (async (req) => {
           token = randomToken();
           await admin.from("newsletter_unsubscribe_tokens").insert({ email: r.email, token });
         }
-        const unsubscribeUrl = `${(__env("PUBLIC_SITE_URL") ?? "https://santosha-yoga.de")}/newsletter/unsubscribe?token=${token}`;
+        const unsubscribeUrl = `${(__env("PUBLIC_SITE_URL") ?? "https://yoga-heide.de")}/newsletter/unsubscribe?token=${token}`;
 
         const html = renderCampaign(blocks, {
           trackingBaseUrl,

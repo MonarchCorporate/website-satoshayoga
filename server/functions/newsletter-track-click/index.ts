@@ -6,7 +6,7 @@ export default (async (req) => {
   const url = new URL(req.url);
   const recipientId = url.searchParams.get("r");
   const linkId = url.searchParams.get("l");
-  let target = "https://santosha-yoga.de";
+  let target = "https://yoga-heide.de";
 
   try {
     const admin = createClient(__env("SUPABASE_URL")!, __env("SUPABASE_SERVICE_ROLE_KEY")!);
