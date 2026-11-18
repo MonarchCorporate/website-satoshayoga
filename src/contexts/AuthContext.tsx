@@ -1,9 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Session = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type User = any;
 
 interface AuthContextType {
   session: Session | null;
@@ -49,7 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchRoles(session.user.id), 0);
+          // Load roles before leaving the loading state, otherwise protected
+          // routes redirect on a direct page load before the roles are known.
+          await fetchRoles(session.user.id);
         } else {
           setRoles([]);
         }
@@ -57,11 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRoles(session.user.id);
+        await fetchRoles(session.user.id);
       }
       setLoading(false);
     });

@@ -1,29 +1,29 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import g1 from "@/assets/gallery/g1.jpg.asset.json";
-import g2 from "@/assets/gallery/g2.jpg.asset.json";
-import g3 from "@/assets/gallery/g3.jpg.asset.json";
-import g4 from "@/assets/gallery/g4.jpg.asset.json";
-import g5 from "@/assets/gallery/g5.jpg.asset.json";
-import g6 from "@/assets/gallery/g6.jpg.asset.json";
-import g7 from "@/assets/gallery/g7.jpg.asset.json";
-import g8 from "@/assets/gallery/g8.jpg.asset.json";
-import g9 from "@/assets/gallery/g9.jpg.asset.json";
-import g10 from "@/assets/gallery/g10.jpg.asset.json";
-import g11 from "@/assets/gallery/g11-studio.jpg.asset.json";
+import g1 from "@/assets/gallery/g1.jpg";
+import g2 from "@/assets/gallery/g2.jpg";
+import g3 from "@/assets/gallery/g3.jpg";
+import g4 from "@/assets/gallery/g4.jpg";
+import g5 from "@/assets/gallery/g5.jpg";
+import g6 from "@/assets/gallery/g6.jpg";
+import g7 from "@/assets/gallery/g7.jpg";
+import g8 from "@/assets/gallery/g8.jpg";
+import g9 from "@/assets/gallery/g9.jpg";
+import g10 from "@/assets/gallery/g10.jpg";
+import g11 from "@/assets/gallery/g11-studio.jpg";
 
 const images = [
-  { src: g5.url, alt: "Yoga Studio Innenraum mit Matten" },
-  { src: g1.url, alt: "Lieblingsplatz Schild mit Lichterkette" },
-  { src: g4.url, alt: "YOGA Schriftzug vor grüner Wand" },
-  { src: g3.url, alt: "Holz-Skulptur im Meditationsraum" },
-  { src: g2.url, alt: "Waschbereich mit Steinwaschbecken" },
-  { src: g8.url, alt: "Gäste-WC mit Buddha Poster" },
-  { src: g7.url, alt: "Eingangsbereich mit Garderobe" },
-  { src: g6.url, alt: "Eingang zum Yoga Haus" },
-  { src: g10.url, alt: "Terrasse mit Hängesessel" },
-  { src: g9.url, alt: "Terrasse hinter dem Yoga Haus" },
-  { src: g11.url, alt: "Yoga Studio mit Matten und Gartenblick" },
+  { src: g5, alt: "Yoga Studio Innenraum mit Matten" },
+  { src: g1, alt: "Lieblingsplatz Schild mit Lichterkette" },
+  { src: g4, alt: "YOGA Schriftzug vor grüner Wand" },
+  { src: g3, alt: "Holz-Skulptur im Meditationsraum" },
+  { src: g2, alt: "Waschbereich mit Steinwaschbecken" },
+  { src: g8, alt: "Gäste-WC mit Buddha Poster" },
+  { src: g7, alt: "Eingangsbereich mit Garderobe" },
+  { src: g6, alt: "Eingang zum Yoga Haus" },
+  { src: g10, alt: "Terrasse mit Hängesessel" },
+  { src: g9, alt: "Terrasse hinter dem Yoga Haus" },
+  { src: g11, alt: "Yoga Studio mit Matten und Gartenblick" },
 ];
 
 export default function Gallery() {
