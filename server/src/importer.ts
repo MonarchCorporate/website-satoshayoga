@@ -146,8 +146,13 @@ importRouter.post("/import", express.raw({ type: () => true, limit: "200mb" }), 
 /** Startup import: picks up santosha-import.enc next to the app (uploaded via file manager). */
 export async function importFromFileIfPresent() {
   if (!config.migrationKey) return;
-  const candidates = [process.cwd(), path.resolve(process.cwd(), ".."), path.resolve(process.cwd(), "public_html")]
-    .map((d) => path.join(d, "santosha-import.enc"));
+  const candidates = [
+    process.cwd(),
+    path.resolve(process.cwd(), ".."),
+    path.resolve(process.cwd(), "public_html"),
+    // Hostinger: ~/domains/<domain>/public_html next to STORAGE_DIR
+    path.resolve(config.storageDir, "..", "public_html"),
+  ].map((d) => path.join(d, "santosha-import.enc"));
   for (const f of candidates) {
     if (!fs.existsSync(f)) continue;
     console.log(`[import] found ${f}, importing…`);
