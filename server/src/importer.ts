@@ -47,15 +47,24 @@ function rewrite(v: any): any {
   return v;
 }
 
-async function insertBatch(conn: any, table: string, cols: string[], rows: unknown[][]) {
+async function insertBatch(conn: any, table: string, cols: string[], rows: unknown[][], ignore = false) {
+  let inserted = 0;
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
     const ph = chunk.map(() => `(${cols.map(() => "?").join(",")})`).join(",");
-    await conn.query(`INSERT INTO \`${table}\` (${cols.map((c) => `\`${c}\``).join(",")}) VALUES ${ph}`, chunk.flat());
+    const [r] = await conn.query(`INSERT ${ignore ? "IGNORE " : ""}INTO \`${table}\` (${cols.map((c) => `\`${c}\``).join(",")}) VALUES ${ph}`, chunk.flat());
+    inserted += Number(r?.affectedRows ?? 0);
   }
+  return inserted;
 }
 
-export async function importBundle(buf: Buffer) {
+/**
+ * mode "replace": wipe everything and load the export (initial import / final sync).
+ * mode "merge":   only add rows that do not exist yet (catch-up after the DNS switch);
+ *                 existing rows on the new system are never modified.
+ */
+export async function importBundle(buf: Buffer, mode: "replace" | "merge" = "replace", numberGap = 0) {
+  const merge = mode === "merge";
   const files = decryptBundle(buf);
   const data = JSON.parse(files.get("data.json")!.toString("utf8"));
   const authData = JSON.parse(files.get("auth.json")!.toString("utf8"));
@@ -65,12 +74,14 @@ export async function importBundle(buf: Buffer) {
     await conn.query("SET FOREIGN_KEY_CHECKS = 0");
     await conn.beginTransaction();
     const order: string[] = (meta as any).tableOrder;
-    for (const t of [...order].reverse()) await conn.query(`DELETE FROM \`${t}\``);
-    for (const t of ["auth_refresh_tokens", "auth_one_time_tokens", "storage_objects", "auth_users", "app_sequences"]) await conn.query(`DELETE FROM \`${t}\``);
+    if (!merge) {
+      for (const t of [...order].reverse()) await conn.query(`DELETE FROM \`${t}\``);
+      for (const t of ["auth_refresh_tokens", "auth_one_time_tokens", "storage_objects", "auth_users", "app_sequences"]) await conn.query(`DELETE FROM \`${t}\``);
+    }
 
     // auth.users
     const users = authData.users ?? [];
-    await insertBatch(
+    counts.auth_users = await insertBatch(
       conn,
       "auth_users",
       ["id", "email", "encrypted_password", "email_confirmed_at", "created_at", "updated_at", "last_sign_in_at", "raw_user_meta_data", "raw_app_meta_data", "phone", "banned_until", "deleted_at", "is_anonymous"],
@@ -80,21 +91,36 @@ export async function importBundle(buf: Buffer) {
         JSON.stringify(u.raw_user_meta_data ?? {}), JSON.stringify(u.raw_app_meta_data ?? {}), u.phone || null,
         toMysqlDatetime(u.banned_until), toMysqlDatetime(u.deleted_at), u.is_anonymous ? 1 : 0,
       ]),
+      merge,
     );
-    counts.auth_users = users.length;
 
     // public tables
     for (const t of order) {
       const rows: any[] = data[t] ?? [];
       const tm = meta.tables[t];
       const cols = Object.keys(tm.columns);
-      await insertBatch(conn, t, cols, rows.map((r) => cols.map((c) => encodeValue(tm.columns[c].type, rewrite(r[c]) ?? null) ?? null)));
-      counts[t] = rows.length;
+      counts[t] = await insertBatch(conn, t, cols, rows.map((r) => cols.map((c) => encodeValue(tm.columns[c].type, rewrite(r[c]) ?? null) ?? null)), merge);
+      if (merge && counts[t] < rows.length) counts[`${t}__already_present_or_conflicting`] = rows.length - counts[t];
     }
 
     // course number sequence (Postgres: courses_course_no_seq)
     const maxNo = Math.max(0, ...(data.courses ?? []).map((c: any) => Number(c.course_no ?? 0)));
-    await conn.query("INSERT INTO app_sequences (name, value) VALUES ('courses_course_no_seq', ?)", [maxNo]);
+    await conn.query(
+      "INSERT INTO app_sequences (name, value) VALUES ('courses_course_no_seq', ?) ON DUPLICATE KEY UPDATE value = GREATEST(value, VALUES(value))",
+      [maxNo],
+    );
+    if (!merge && numberGap > 0) {
+      // Leave a small gap in the yearly order/invoice counters so numbers issued by the old
+      // system during the DNS switch can never collide with numbers issued here.
+      await conn.query("UPDATE number_sequences SET last_value = last_value + ?", [Math.trunc(numberGap)]);
+      counts.number_gap = Math.trunc(numberGap);
+    }
+    if (merge) {
+      // keep yearly counters ahead of anything created on either system
+      for (const ns of data.number_sequences ?? []) {
+        await conn.query("UPDATE number_sequences SET last_value = GREATEST(last_value, ?) WHERE scope = ? AND year = ?", [ns.last_value, ns.scope, ns.year]);
+      }
+    }
 
     // storage
     let stored = 0;
@@ -105,12 +131,13 @@ export async function importBundle(buf: Buffer) {
       if (!f) continue;
       const dest = path.resolve(config.storageDir, o.bucket_id, o.name);
       if (!dest.startsWith(path.resolve(config.storageDir))) continue;
+      if (merge && fs.existsSync(dest)) continue;
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.writeFileSync(dest, f);
       objRows.push([o.id, o.bucket_id, o.name, o.owner ?? null, JSON.stringify(o.metadata ?? {}), toMysqlDatetime(o.created_at), toMysqlDatetime(o.created_at)]);
       stored++;
     }
-    await insertBatch(conn, "storage_objects", ["id", "bucket_id", "name", "owner", "metadata", "created_at", "updated_at"], objRows);
+    await insertBatch(conn, "storage_objects", ["id", "bucket_id", "name", "owner", "metadata", "created_at", "updated_at"], objRows, merge);
     counts.storage_files = stored;
 
     await conn.commit();
@@ -136,7 +163,9 @@ export const importRouter = express.Router();
 importRouter.post("/import", express.raw({ type: () => true, limit: "200mb" }), async (req, res) => {
   if (!keyOk(req.headers["x-migration-key"])) return res.status(404).json({ error: "not found" });
   try {
-    res.json({ ok: true, counts: await importBundle(req.body as Buffer) });
+    const mode = req.query.mode === "merge" ? "merge" : "replace";
+    const gap = Number(req.query.gap ?? 0) || 0;
+    res.json({ ok: true, mode, counts: await importBundle(req.body as Buffer, mode, gap) });
   } catch (e: any) {
     console.error("[import] failed", e);
     res.status(500).json({ ok: false, error: e?.message ?? String(e) });
