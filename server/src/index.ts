@@ -284,6 +284,10 @@ if (fs.existsSync(distDir)) {
 }
 
 app.use((err: any, _req: ExReq, res: ExRes, _next: NextFunction) => {
+  if (err?.type === "entity.parse.failed" || err?.type === "entity.too.large") {
+    if (!res.headersSent) res.status(err.status ?? 400).json({ message: "Invalid request body", code: err.type, status: err.status ?? 400 });
+    return;
+  }
   console.error("[server] unhandled", err);
   if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
 });
