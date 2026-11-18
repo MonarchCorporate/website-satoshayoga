@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { MapPin, User as UserIcon, ShoppingCart } from "lucide-react";
+import WaitlistButton from "@/components/WaitlistButton";
 
 export type CourseDetail = {
   id: string;
@@ -170,7 +171,8 @@ export default function CourseDetailDialog({ course, open, onOpenChange, onBook 
               Termin direkt bei {course.trainers ? `${course.trainers.first_name} ${course.trainers.last_name}` : "der Trainerin / dem Trainer"} vereinbaren
             </p>
           )}
-          {!isPast && !course.direct_trainer_booking && (
+          {!isPast && !course.direct_trainer_booking && full && <WaitlistButton courseId={course.id} />}
+          {!isPast && !course.direct_trainer_booking && !full && (
             <Button
               disabled={full || notYetOpen}
               onClick={() => {

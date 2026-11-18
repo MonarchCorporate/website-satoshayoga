@@ -24,12 +24,17 @@ Dateien: STORAGE_DIR (außerhalb des App-Ordners, übersteht Deploys)
 
 * **Datenbank-Schema**: `server/schema/schema.sql` (wird beim Start automatisch
   angelegt, `CREATE TABLE IF NOT EXISTS`). Generiert aus dem Postgres-Schema mit
-  `scripts/gen_schema.py`.
+  `scripts/gen_schema.py` (Quelle: `server/schema/source/postgres-schema.json`;
+  neue Tabellen werden direkt im Generator ergänzt).
 * **Zugriffsregeln**: Die Row-Level-Security-Policies aus Postgres sind 1:1 nach
   MySQL übersetzt (`server/schema/meta.json`) und werden bei jeder Abfrage
   angewendet. Trigger sind in `server/src/hooks.ts` nachgebaut.
 * **Login**: Bestehende Passwörter (bcrypt) wurden übernommen – Kund:innen
   melden sich mit ihrem bisherigen Passwort an.
+* **Warteliste**: Kund:innen können sich bei ausgebuchten Kursen eintragen
+  (Tabelle `waitlist_entries`, Logik in `server/src/waitlist.ts`). Wird ein Platz
+  frei, bekommen alle Wartenden die E-Mail-Vorlage „Warteliste: Platz frei“
+  (`waitlist_spot_available`, im Backoffice bearbeitbar) mit Direktlink zum Kurs.
 * **Geplante Aufgaben**: PayPal-Abgleich alle 10 Minuten (`server/src/cron.ts`).
   Optional zusätzlich als Hostinger-Cronjob:
   `curl -X POST -H "x-cron-secret: $CRON_SECRET" https://yoga-heide.de/api/internal/cron/reconcile-paypal-orders`

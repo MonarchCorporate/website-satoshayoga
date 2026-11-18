@@ -221,7 +221,7 @@ export default function BookingWizard({ course, open, onOpenChange, freeSeats }:
         .from("class_cards")
         .select("id, card_type, remaining_credits, total_credits, expires_at")
         .eq("user_id", user.id)
-        .neq("status", "cancelled")
+        .eq("status", "active")
         .gt("remaining_credits", 0)
         .order("purchased_at", { ascending: true });
 

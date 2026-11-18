@@ -26,6 +26,7 @@ interface Props {
 
 export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, onChanged }: Props) {
   const [bookings, setBookings] = useState<any[]>([]);
+  const [waitlist, setWaitlist] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -78,7 +79,7 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
     (async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("id, status, amount_paid, payment_method, paid_with_card, user_id")
+        .select("id, status, amount_paid, payment_method, paid_with_card, user_id, order_id, orders(status, payment_method, order_number)")
         .eq("course_id", course.id);
       const userIds = Array.from(new Set((data ?? []).map((b: any) => b.user_id)));
       let profiles: any[] = [];
@@ -94,9 +95,35 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
         profile: profiles.find(p => p.user_id === b.user_id),
       }));
       setBookings(merged);
+      await loadWaitlist(course.id);
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, course?.id]);
+
+  const loadWaitlist = async (courseId: string) => {
+    const { data: wl } = await supabase
+      .from("waitlist_entries" as any)
+      .select("id, user_id, status, created_at, notified_at")
+      .eq("course_id", courseId)
+      .in("status", ["waiting", "notified"])
+      .order("created_at", { ascending: true });
+    const list = (wl as any[]) ?? [];
+    const ids = list.map((w) => w.user_id);
+    let profs: any[] = [];
+    if (ids.length) {
+      const { data: p } = await supabase.from("profiles").select("user_id, first_name, last_name, email, phone").in("user_id", ids);
+      profs = p ?? [];
+    }
+    setWaitlist(list.map((w) => ({ ...w, profile: profs.find((p) => p.user_id === w.user_id) })));
+  };
+
+  const removeFromWaitlist = async (id: string) => {
+    const { error } = await supabase.from("waitlist_entries" as any).delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    setWaitlist((prev) => prev.filter((w) => w.id !== id));
+    toast.success("Von der Warteliste entfernt.");
+  };
 
   if (!course) return null;
 
@@ -107,6 +134,13 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
     : { label: "Offen", variant: "outline" as const, color: "bg-emerald-500" };
 
   const confirmed = bookings.filter(b => b.status === "confirmed").length;
+  // A booking counts as unpaid while it waits for payment or its order is not paid yet
+  // (e.g. "Kauf auf Rechnung"). Card/voucher/admin bookings are always settled.
+  const isUnpaid = (b: any) =>
+    b.status !== "cancelled" &&
+    (b.status === "pending_payment" ||
+      (!!b.orders && b.orders.status !== "paid" && b.orders.status !== "refunded" && !b.paid_with_card));
+  const unpaidCount = bookings.filter(isUnpaid).length;
   const filtered = bookings.filter(b => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -159,7 +193,7 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
   const reloadBookings = async () => {
     const { data } = await supabase
       .from("bookings")
-      .select("id, status, amount_paid, payment_method, paid_with_card, user_id")
+      .select("id, status, amount_paid, payment_method, paid_with_card, user_id, order_id, orders(status, payment_method, order_number)")
       .eq("course_id", course.id);
     const userIds = Array.from(new Set((data ?? []).map((b: any) => b.user_id)));
     let profiles: any[] = [];
@@ -341,15 +375,59 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
             </div>
 
             <Tabs defaultValue="participants">
-              <TabsList className="grid grid-cols-2 w-full">
+              <TabsList className="grid grid-cols-3 w-full">
                 <TabsTrigger value="participants">{confirmed} Teilnehmer</TabsTrigger>
+                <TabsTrigger value="waitlist">Warteliste ({waitlist.length})</TabsTrigger>
                 <TabsTrigger value="summary">Zusammenfassung</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="waitlist" className="space-y-3 pt-3">
+                {waitlist.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">Niemand auf der Warteliste.</p>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Wird ein Platz frei, bekommen alle Wartenden automatisch eine E-Mail – wer zuerst bucht, bekommt den Platz.
+                    </p>
+                    {waitlist.map((w, i) => (
+                      <div key={w.id} className="border rounded p-3 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-sm">
+                            {i + 1}. {w.profile ? `${w.profile.first_name ?? ""} ${w.profile.last_name ?? ""}`.trim() || "Kund:in" : "Kund:in"}
+                          </span>
+                          <Badge variant={w.status === "notified" ? "default" : "secondary"} className="text-[10px]">
+                            {w.status === "notified" ? "Benachrichtigt" : "Wartet"}
+                          </Badge>
+                        </div>
+                        {w.profile?.email && (
+                          <a href={`mailto:${w.profile.email}`} className="text-xs text-primary inline-flex items-center gap-1">
+                            <Mail className="h-3 w-3" />{w.profile.email}
+                          </a>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            seit {format(parseISO(w.created_at), "d. MMM, HH:mm", { locale: de })}
+                            {w.notified_at && ` · informiert ${format(parseISO(w.notified_at), "d. MMM, HH:mm", { locale: de })}`}
+                          </span>
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => removeFromWaitlist(w.id)}>
+                            Entfernen
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </TabsContent>
 
               <TabsContent value="participants" className="space-y-3 pt-3">
                 <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setAddOpen(true)}>
                   <UserPlus className="h-4 w-4" /> Teilnehmer hinzufügen
                 </Button>
+                {unpaidCount > 0 && (
+                  <div className="rounded border border-destructive/60 bg-destructive/10 px-3 py-2 text-sm text-destructive font-medium">
+                    {unpaidCount} {unpaidCount === 1 ? "Teilnehmer:in hat" : "Teilnehmer:innen haben"} noch nicht bezahlt
+                  </div>
+                )}
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input value={search} onChange={(e) => setSearch(e.target.value)}
@@ -359,16 +437,24 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
                 {loading ? <p className="text-sm text-muted-foreground">Laden…</p>
                   : filtered.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">Noch keine Buchungen.</p>
                   : filtered.map(b => (
-                    <div key={b.id} className="border rounded p-3 space-y-1">
+                    <div
+                      key={b.id}
+                      className={`rounded p-3 space-y-1 border ${isUnpaid(b) ? "border-destructive/70 bg-destructive/10" : ""}`}
+                    >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-sm">
+                        <span className="font-medium text-sm flex items-center gap-2 flex-wrap">
                           {b.profile?.first_name} {b.profile?.last_name}
+                          {isUnpaid(b) && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 uppercase tracking-wide">
+                              Nicht bezahlt
+                            </Badge>
+                          )}
                         </span>
                         <Select value={b.status} onValueChange={(v) => updateBookingStatus(b.id, v)}>
                           <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="confirmed">Freigegeben</SelectItem>
-                            <SelectItem value="pending">Wartend</SelectItem>
+                            <SelectItem value="pending_payment">Zahlung offen</SelectItem>
                             <SelectItem value="cancelled">Storniert</SelectItem>
                           </SelectContent>
                         </Select>
@@ -379,7 +465,14 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
                         </a>
                       )}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{b.paid_with_card ? "Karte" : (b.payment_method ?? "–")}</span>
+                        <span>
+                          {b.paid_with_card ? "Karte" : (b.payment_method === "invoice" ? "Rechnung" : (b.payment_method ?? "–"))}
+                          {isUnpaid(b) && (
+                            <span className="text-destructive font-medium">
+                              {" "}· Zahlung offen{b.orders?.order_number ? ` (Best.-Nr. ${b.orders.order_number})` : ""}
+                            </span>
+                          )}
+                        </span>
                         <span>€{Number(b.amount_paid || 0).toFixed(2)}</span>
                       </div>
                     </div>
@@ -389,6 +482,8 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
               <TabsContent value="summary" className="space-y-2 pt-3 text-sm">
                 <Row label="Buchungen gesamt" value={String(bookings.length)} />
                 <Row label="Bestätigt" value={String(confirmed)} />
+                <Row label="Nicht bezahlt" value={String(unpaidCount)} />
+                <Row label="Warteliste" value={String(waitlist.length)} />
                 <Row label="Auslastung" value={`${Math.round((confirmed / course.max_participants) * 100)}%`} />
                 <Row label="Umsatz" value={`€${total.toFixed(2)}`} />
                 {course.series_id && <Row label="Teil einer Serie" value="Ja" />}

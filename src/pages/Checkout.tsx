@@ -166,6 +166,29 @@ export default function Checkout() {
     load();
   }, [user]);
 
+  // Customers with a valid class card get it pre-selected as the first payment option:
+  // assign eligible course items to cards automatically (earliest expiry first).
+  const [autoAssigned, setAutoAssigned] = useState(false);
+  useEffect(() => {
+    if (autoAssigned || loading || !items.length || !cards.length) return;
+    const sorted = [...cards].sort((a, b) => {
+      const ea = a.expires_at ? new Date(a.expires_at).getTime() : Infinity;
+      const eb = b.expires_at ? new Date(b.expires_at).getTime() : Infinity;
+      return ea - eb;
+    });
+    const left = new Map(sorted.map((c) => [c.id, c.remaining_credits]));
+    const next: Record<string, string> = {};
+    for (const it of items) {
+      if (!it.course_id || !it.courses || it.courses.class_cards_allowed === false) continue;
+      const card = sorted.find((c) => (left.get(c.id) ?? 0) > 0);
+      if (!card) break;
+      next[it.id] = card.id;
+      left.set(card.id, (left.get(card.id) ?? 0) - 1);
+    }
+    setCardAssignments(next);
+    setAutoAssigned(true);
+  }, [autoAssigned, loading, items, cards]);
+
   const isAssignedWithCard = (i: CartItem) =>
     !!i.course_id && !!cardAssignments[i.id];
 
@@ -530,9 +553,9 @@ export default function Checkout() {
             {eligibleCardItems.length > 0 && cards.length > 0 && (
               <div className="rounded-lg border p-4 space-y-3">
                 <div>
-                  <h4 className="font-semibold text-sm">Mit Gruppenkarte bezahlen</h4>
+                  <h4 className="font-semibold text-sm">Mit deiner Karte bezahlen</h4>
                   <p className="text-xs text-muted-foreground">
-                    Weise einzelne Kurse einer deiner Karten zu. Der Preis wird von der Summe abgezogen. Nicht zugewiesene Kurse werden ganz normal bezahlt.
+                    Deine Karte ist bereits für die passenden Kurse ausgewählt – der Preis wird von der Summe abgezogen. Du kannst einzelne Kurse auch auf „Normal bezahlen“ umstellen.
                   </p>
                 </div>
                 {eligibleCardItems.map((it) => (
@@ -553,7 +576,6 @@ export default function Checkout() {
                         }))
                       }
                     >
-                      <option value="">Normal bezahlen</option>
                       {cards.map((c) => {
                         const used = cardUsage[c.id] ?? 0;
                         const isCurrent = cardAssignments[it.id] === c.id;
@@ -565,6 +587,7 @@ export default function Checkout() {
                           </option>
                         );
                       })}
+                      <option value="">Normal bezahlen</option>
                     </select>
                   </div>
                 ))}

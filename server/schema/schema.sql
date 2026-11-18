@@ -749,3 +749,18 @@ CREATE TABLE IF NOT EXISTS `voucher_redemptions` (
   CONSTRAINT `voucher_redemptions_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `auth_users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `voucher_redemptions_voucher_id_fkey` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE IF NOT EXISTS `waitlist_entries` (
+  `id` CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `course_id` CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `user_id` CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT ('waiting'),
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `notified_at` DATETIME(6) NULL,
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `waitlist_entries_course_id_user_id_uq` (`course_id`, `user_id`),
+  KEY `idx_waitlist_course_status` (`course_id`, `status`),
+  CONSTRAINT `waitlist_entries_course_id_fkey` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `waitlist_entries_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `auth_users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;

@@ -99,3 +99,30 @@ async function uniqueVoucherCode(ctx: Ctx, row: Row, old: Row | null) {
 }
 on("vouchers", "beforeInsert", uniqueVoucherCode);
 on("vouchers", "beforeUpdate", uniqueVoucherCode);
+
+// ---------------------------------------------------------------------------
+// Waitlist (new feature, not part of the original Postgres triggers)
+// ---------------------------------------------------------------------------
+import { validateJoin, scheduleWaitlistCheck, markBooked } from "./waitlist";
+
+on("waitlist_entries", "beforeInsert", validateJoin);
+
+const HOLDS_SEAT = new Set(["confirmed", "pending_payment"]);
+on("bookings", "afterInsert", async (ctx, row) => {
+  if (HOLDS_SEAT.has(row.status)) await markBooked(ctx.conn!, row.course_id, row.user_id);
+  scheduleWaitlistCheck(row.course_id);
+});
+on("bookings", "afterUpdate", async (ctx, row, old) => {
+  if (row.status === old?.status && row.course_id === old?.course_id) return;
+  if (HOLDS_SEAT.has(row.status)) await markBooked(ctx.conn!, row.course_id, row.user_id);
+  scheduleWaitlistCheck(row.course_id);
+  if (old?.course_id && old.course_id !== row.course_id) scheduleWaitlistCheck(old.course_id);
+});
+on("bookings", "beforeDelete", (_ctx, row) => {
+  scheduleWaitlistCheck(row.course_id);
+});
+on("courses", "afterUpdate", (_ctx, row, old) => {
+  if (Number(row.max_participants) !== Number(old?.max_participants) || row.is_cancelled !== old?.is_cancelled) {
+    scheduleWaitlistCheck(row.id);
+  }
+});

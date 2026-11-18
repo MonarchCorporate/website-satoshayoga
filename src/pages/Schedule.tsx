@@ -10,6 +10,7 @@ import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import CourseDetailDialog, { type CourseDetail } from "@/components/CourseDetailDialog";
+import WaitlistButton from "@/components/WaitlistButton";
 
 type Course = Tables<"courses"> & {
   course_types?: { name: string; color: string | null; image_url?: string | null } | null;
@@ -173,7 +174,10 @@ export default function Schedule() {
                           {!isPast && course.direct_trainer_booking && (
                             <p className="text-xs text-primary">Termin direkt bei Trainer:in vereinbaren</p>
                           )}
-                          {!isPast && !course.direct_trainer_booking && (
+                          {!isPast && !course.direct_trainer_booking && full && (
+                            <WaitlistButton courseId={course.id} compact />
+                          )}
+                          {!isPast && !course.direct_trainer_booking && !full && (
                             <Button
                               size="sm"
                               className="w-full text-xs h-7"

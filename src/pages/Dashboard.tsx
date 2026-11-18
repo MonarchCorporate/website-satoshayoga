@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO, differenceInHours, differenceInCalendarDays, isPast } from "date-fns";
 import { de } from "date-fns/locale";
-import { CalendarDays, CreditCard, Download, Mail, FileText } from "lucide-react";
+import { CalendarDays, CreditCard, Download, Mail, FileText, Hourglass, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [waitlist, setWaitlist] = useState<any[]>([]);
 
 
   useEffect(() => {
@@ -54,6 +55,13 @@ export default function Dashboard() {
       setCards(cardsRes.data ?? []);
       setOrders(ordersRes.data ?? []);
       setNewsletterOptIn(profileRes.data?.newsletter_opt_in ?? false);
+      const { data: wl } = await supabase
+        .from("waitlist_entries" as any)
+        .select("id, status, created_at, notified_at, courses(id, title, start_time, end_time)")
+        .eq("user_id", user.id)
+        .in("status", ["waiting", "notified"])
+        .order("created_at", { ascending: true });
+      setWaitlist(((wl as any[]) ?? []).filter((w) => w.courses && !isPast(parseISO(w.courses.start_time))));
       setLoading(false);
     };
     fetch();
@@ -112,6 +120,16 @@ export default function Dashboard() {
     }
   };
 
+
+  const leaveWaitlist = async (entryId: string) => {
+    const { error } = await supabase.from("waitlist_entries" as any).delete().eq("id", entryId);
+    if (error) {
+      toast.error("Konnte dich nicht austragen: " + error.message);
+      return;
+    }
+    setWaitlist((prev) => prev.filter((w) => w.id !== entryId));
+    toast.success("Du wurdest von der Warteliste entfernt.");
+  };
 
   const downloadICS = (booking: any) => {
     const start = parseISO(booking.courses.start_time);
@@ -451,6 +469,58 @@ END:VCALENDAR`;
         })()}
       </section>
 
+
+      {/* Waitlist */}
+      {waitlist.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-2xl mb-4 flex items-center gap-2">
+            <Hourglass className="h-5 w-5 text-primary" />
+            Meine Warteliste
+          </h2>
+          <div className="space-y-3">
+            {waitlist.map((w) => {
+              const start = parseISO(w.courses.start_time);
+              const free = w.status === "notified";
+              return (
+                <Card key={w.id} className={free ? "border-primary" : ""}>
+                  <CardContent className="flex items-center justify-between gap-3 p-4 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="font-medium">{w.courses.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(start, "EEEE, d. MMM · HH:mm", { locale: de })}
+                      </p>
+                      <div className="mt-1">
+                        {free ? (
+                          <Badge className="text-xs bg-primary/20 text-primary border border-primary/40">
+                            Platz frei – jetzt buchen
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            Auf der Warteliste seit {format(parseISO(w.created_at), "d. MMM", { locale: de })}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {free && (
+                        <Button size="sm" onClick={() => (window.location.href = `/?kurs=${w.courses.id}#yogaplan`)}>
+                          Jetzt buchen
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => leaveWaitlist(w.id)} title="Von der Warteliste austragen">
+                        <X className="h-4 w-4 mr-1" /> Austragen
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Sobald ein Platz frei wird, bekommst du eine E-Mail. Wer zuerst bucht, bekommt den Platz.
+          </p>
+        </section>
+      )}
 
       {/* Orders / Invoices */}
       {orders.length > 0 && (

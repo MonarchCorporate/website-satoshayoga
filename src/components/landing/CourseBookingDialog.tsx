@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { MapPin, User as UserIcon } from "lucide-react";
+import WaitlistButton from "@/components/WaitlistButton";
 import BookingWizard from "./BookingWizard";
 
 type CourseRow = {
@@ -186,6 +187,8 @@ export default function CourseBookingDialog({ course, open, onOpenChange }: Prop
             </Button>
             {direct ? (
               <p className="text-sm text-[hsl(var(--primary))] self-center">Termin direkt bei {trainerName} vereinbaren</p>
+              ) : full && start > new Date() ? (
+              <WaitlistButton courseId={course.id} />
               ) : (
               <Button
               disabled={full || notYetOpen}

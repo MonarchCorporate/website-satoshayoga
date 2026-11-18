@@ -201,6 +201,23 @@ export const EMAIL_TRIGGERS: EmailTriggerDef[] = [
     `),
   },
   {
+    trigger_key: "waitlist_spot_available",
+    category: "Buchung",
+    display_name: "Warteliste: Platz frei",
+    description:
+      "Wird an Kund:innen auf der Warteliste geschickt, sobald in einem ausgebuchten Kurs ein Platz frei wird.",
+    default_subject: "Ein Platz ist frei: {{course_title}} am {{course_date}}",
+    placeholders: ["customer_first_name", "course_title", "course_date", "course_time", "booking_url"],
+    default_body_html: wrap(`
+      ${heading("Gute Nachricht – ein Platz ist frei!")}
+      <p>Hallo {{customer_first_name}},</p>
+      <p>du stehst auf der Warteliste für <strong>{{course_title}}</strong> am {{course_date}} ({{course_time}}). Gerade ist ein Platz frei geworden.</p>
+      <p>Wer zuerst bucht, bekommt den Platz – sei also gern schnell:</p>
+      ${button("Jetzt Platz buchen", "booking_url")}
+      <p style="color:#666;font-size:13px;">Du kannst dich jederzeit in deinem Kundenbereich von der Warteliste austragen.</p>
+    `),
+  },
+  {
     trigger_key: "course_cancelled",
     category: "Buchung",
     display_name: "Kursabsage (durch Studio)",

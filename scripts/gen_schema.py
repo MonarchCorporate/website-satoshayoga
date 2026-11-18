@@ -192,6 +192,39 @@ for p in s["policies"]:
         tables[p["tablename"]]["policies"].append(pol)
 
 # --------------------------------------------------------------------------
+# Tables added after the migration away from Supabase (not in the Postgres export)
+# --------------------------------------------------------------------------
+tables["waitlist_entries"] = {
+    "columns": {
+        "id": {"type": "uuid", "nullable": False, "default": {"kind": "uuid"}},
+        "course_id": {"type": "uuid", "nullable": False, "default": None},
+        "user_id": {"type": "uuid", "nullable": False, "default": None},
+        # waiting -> notified (a seat became free, e-mail sent) -> booked; removed by customer/admin = row deleted
+        "status": {"type": "text", "nullable": False, "default": {"kind": "literal", "value": "waiting"}},
+        "created_at": {"type": "timestamptz", "nullable": False, "default": {"kind": "now"}},
+        "notified_at": {"type": "timestamptz", "nullable": True, "default": None},
+        "updated_at": {"type": "timestamptz", "nullable": False, "default": {"kind": "now"}},
+    },
+    "pk": ["id"],
+    "unique": [["course_id", "user_id"]],
+    "fks": [
+        {"name": "waitlist_entries_course_id_fkey", "columns": ["course_id"], "refTable": "courses", "refColumns": ["id"], "onDelete": "CASCADE"},
+        {"name": "waitlist_entries_user_id_fkey", "columns": ["user_id"], "refTable": "auth_users", "refColumns": ["id"], "onDelete": "CASCADE"},
+    ],
+    "indexes": [{"name": "idx_waitlist_course_status", "columns": ["course_id", "status"]}],
+    "policies": [
+        {"name": "Admins manage waitlist", "cmd": "ALL", "roles": ["authenticated"], "using": "(@role_admin = 1)", "check": "(@role_admin = 1)"},
+        {"name": "Staff view waitlist", "cmd": "SELECT", "roles": ["authenticated"], "using": "(@role_staff = 1)", "check": None},
+        {"name": "Staff remove waitlist entries", "cmd": "DELETE", "roles": ["authenticated"], "using": "(@role_staff = 1)", "check": None},
+        {"name": "Trainers view waitlist of own courses", "cmd": "SELECT", "roles": ["authenticated"],
+         "using": "(EXISTS ( SELECT 1 FROM courses c WHERE ((c.id = waitlist_entries.course_id) AND (c.instructor_id = @trainer_id))))", "check": None},
+        {"name": "Users view own waitlist entries", "cmd": "SELECT", "roles": ["authenticated"], "using": "(@uid = user_id)", "check": None},
+        {"name": "Users join waitlist", "cmd": "INSERT", "roles": ["authenticated"], "using": None, "check": "(@uid = user_id)"},
+        {"name": "Users leave waitlist", "cmd": "DELETE", "roles": ["authenticated"], "using": "(@uid = user_id)", "check": None},
+    ],
+}
+
+# --------------------------------------------------------------------------
 # Views (exposed as derived tables, readable by everybody like in Supabase)
 # --------------------------------------------------------------------------
 views = {

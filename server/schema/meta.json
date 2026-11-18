@@ -4718,6 +4718,161 @@
      "check": "(@role_admin = 1)"
     }
    ]
+  },
+  "waitlist_entries": {
+   "columns": {
+    "id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": {
+      "kind": "uuid"
+     }
+    },
+    "course_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "user_id": {
+     "type": "uuid",
+     "nullable": false,
+     "default": null
+    },
+    "status": {
+     "type": "text",
+     "nullable": false,
+     "default": {
+      "kind": "literal",
+      "value": "waiting"
+     }
+    },
+    "created_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    },
+    "notified_at": {
+     "type": "timestamptz",
+     "nullable": true,
+     "default": null
+    },
+    "updated_at": {
+     "type": "timestamptz",
+     "nullable": false,
+     "default": {
+      "kind": "now"
+     }
+    }
+   },
+   "pk": [
+    "id"
+   ],
+   "unique": [
+    [
+     "course_id",
+     "user_id"
+    ]
+   ],
+   "fks": [
+    {
+     "name": "waitlist_entries_course_id_fkey",
+     "columns": [
+      "course_id"
+     ],
+     "refTable": "courses",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    },
+    {
+     "name": "waitlist_entries_user_id_fkey",
+     "columns": [
+      "user_id"
+     ],
+     "refTable": "auth_users",
+     "refColumns": [
+      "id"
+     ],
+     "onDelete": "CASCADE"
+    }
+   ],
+   "indexes": [
+    {
+     "name": "idx_waitlist_course_status",
+     "columns": [
+      "course_id",
+      "status"
+     ]
+    }
+   ],
+   "policies": [
+    {
+     "name": "Admins manage waitlist",
+     "cmd": "ALL",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_admin = 1)",
+     "check": "(@role_admin = 1)"
+    },
+    {
+     "name": "Staff view waitlist",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_staff = 1)",
+     "check": null
+    },
+    {
+     "name": "Staff remove waitlist entries",
+     "cmd": "DELETE",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@role_staff = 1)",
+     "check": null
+    },
+    {
+     "name": "Trainers view waitlist of own courses",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(EXISTS ( SELECT 1 FROM courses c WHERE ((c.id = waitlist_entries.course_id) AND (c.instructor_id = @trainer_id))))",
+     "check": null
+    },
+    {
+     "name": "Users view own waitlist entries",
+     "cmd": "SELECT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@uid = user_id)",
+     "check": null
+    },
+    {
+     "name": "Users join waitlist",
+     "cmd": "INSERT",
+     "roles": [
+      "authenticated"
+     ],
+     "using": null,
+     "check": "(@uid = user_id)"
+    },
+    {
+     "name": "Users leave waitlist",
+     "cmd": "DELETE",
+     "roles": [
+      "authenticated"
+     ],
+     "using": "(@uid = user_id)",
+     "check": null
+    }
+   ]
   }
  },
  "views": {
@@ -4928,6 +5083,7 @@
   "video_course_voucher_plans",
   "video_lessons",
   "video_lesson_progress",
-  "voucher_redemptions"
+  "voucher_redemptions",
+  "waitlist_entries"
  ]
 }

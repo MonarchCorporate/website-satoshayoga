@@ -63,6 +63,34 @@ export default function PublicCalendar() {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const dayStripRef = useRef<HTMLDivElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  // Deep link from the waitlist e-mail: /?kurs=<course id>#yogaplan opens that course directly
+  const [deepLinkId, setDeepLinkId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("kurs") : null,
+  );
+  useEffect(() => {
+    if (!deepLinkId) return;
+    supabase
+      .from("courses")
+      .select("start_time")
+      .eq("id", deepLinkId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.start_time) setMonthStart(startOfMonth(new Date(data.start_time)));
+        else setDeepLinkId(null);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!deepLinkId || loading) return;
+    const hit = courses.find((c) => c.id === deepLinkId);
+    if (!hit) return;
+    setSelected(hit);
+    setDeepLinkId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("kurs");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    document.getElementById("yogaplan")?.scrollIntoView({ behavior: "smooth" });
+  }, [deepLinkId, loading, courses]);
 
   useEffect(() => {
     supabase

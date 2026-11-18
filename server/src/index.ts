@@ -13,6 +13,7 @@ import { invokeFunction, installFetchInterceptor } from "./functions-registry";
 import { ensureSchema } from "./migrate";
 import { importRouter, importFromFileIfPresent } from "./importer";
 import { startCron, runJob } from "./cron";
+import { ensureWaitlistTemplate } from "./waitlist";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = process.env.DIST_DIR ?? path.resolve(__dirname, "..", "dist");
@@ -302,6 +303,7 @@ app.use((err: any, _req: ExReq, res: ExRes, _next: NextFunction) => {
 async function main() {
   await ensureSchema();
   await importFromFileIfPresent().catch((e) => console.error("[import] startup import failed", e));
+  await ensureWaitlistTemplate().catch((e) => console.error("[waitlist] template check failed", e));
   app.listen(config.port, () => {
     console.log(`[server] Santosha Yoga listening on :${config.port} (site ${config.siteUrl})`);
   });

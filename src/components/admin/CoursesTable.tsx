@@ -31,6 +31,7 @@ export default function CoursesTable({ scope, trainerId, title = "Kurse" }: Prop
   const { isAdmin } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [waitCounts, setWaitCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [from, setFrom] = useState<Date>(new Date());
@@ -89,6 +90,15 @@ export default function CoursesTable({ scope, trainerId, title = "Kurse" }: Prop
         if (b.status === "confirmed") map[b.course_id] = (map[b.course_id] ?? 0) + 1;
       });
       setCounts(map);
+      // waitlist counts (customers still waiting or already informed about a free seat)
+      const { data: wl } = await supabase
+        .from("waitlist_entries" as any)
+        .select("course_id")
+        .in("course_id", ids)
+        .in("status", ["waiting", "notified"]);
+      const wmap: Record<string, number> = {};
+      (wl ?? []).forEach((w: any) => { wmap[w.course_id] = (wmap[w.course_id] ?? 0) + 1; });
+      setWaitCounts(wmap);
     }
     setLoading(false);
   };
@@ -311,7 +321,17 @@ export default function CoursesTable({ scope, trainerId, title = "Kurse" }: Prop
                         <ShoppingCart className="h-3 w-3" />{status.label}
                       </span>
                     </td>
-                    <td className="p-3">{cnt} / {c.max_participants}</td>
+                    <td className="p-3">
+                      {cnt} / {c.max_participants}
+                      {(waitCounts[c.id] ?? 0) > 0 && (
+                        <span
+                          className="ml-2 inline-flex items-center rounded border border-primary/50 px-1.5 text-[10px] text-primary"
+                          title="Kund:innen auf der Warteliste"
+                        >
+                          +{waitCounts[c.id]} Warteliste
+                        </span>
+                      )}
+                    </td>
                     <td className="p-3">
                       {c.trainers ? (
                         <span className="inline-flex items-center gap-2">
