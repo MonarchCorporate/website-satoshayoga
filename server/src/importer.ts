@@ -153,14 +153,21 @@ export async function importFromFileIfPresent() {
     // Hostinger: ~/domains/<domain>/public_html next to STORAGE_DIR
     path.resolve(config.storageDir, "..", "public_html"),
   ].map((d) => path.join(d, "santosha-import.enc"));
+  // Remove result markers of earlier imports
+  for (const f of candidates) fs.rmSync(f.replace(/\.enc$/, ".result.json"), { force: true });
   for (const f of candidates) {
     if (!fs.existsSync(f)) continue;
     console.log(`[import] found ${f}, importing…`);
+    let result: Record<string, unknown>;
     try {
-      await importBundle(fs.readFileSync(f));
+      result = { ok: true, counts: await importBundle(fs.readFileSync(f)) };
+    } catch (e: any) {
+      result = { ok: false, error: e?.message ?? String(e) };
     } finally {
       fs.rmSync(f, { force: true });
     }
+    // Non-sensitive marker (row counts only) so the import can be verified via the file manager.
+    fs.writeFileSync(f.replace(/\.enc$/, ".result.json"), JSON.stringify({ ...result!, at: new Date().toISOString() }));
     return;
   }
 }
