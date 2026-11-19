@@ -483,6 +483,9 @@ export default function PublicCalendar() {
                                 }`}
                               >
                                 {full ? "Ausgebucht" : `${free} Plätze frei`}
+                                {full && new Date(c.start_time) > new Date() && (
+                                  <span className="block text-[hsl(var(--primary))]">Warteliste möglich</span>
+                                )}
                               </p>
                             );
                           })()}
@@ -698,7 +701,7 @@ export default function PublicCalendar() {
                               }
                               return (
                                 <span
-                                  className={`text-[10px] uppercase tracking-wider ${
+                                  className={`text-[10px] uppercase tracking-wider text-right ${
                                     full
                                       ? "text-destructive"
                                       : almostFull
@@ -707,6 +710,11 @@ export default function PublicCalendar() {
                                   }`}
                                 >
                                   {full ? "Voll" : `${free} frei`}
+                                  {full && new Date(c.start_time) > new Date() && (
+                                    <span className="block mt-0.5 normal-case tracking-normal text-[hsl(var(--primary))]">
+                                      Warteliste möglich
+                                    </span>
+                                  )}
                                 </span>
                               );
                             })()}
@@ -802,6 +810,11 @@ export default function PublicCalendar() {
                                 }`}
                               >
                                 {full ? "Ausgebucht" : `${free} Plätze frei`}
+                                {full && new Date(c.start_time) > new Date() && (
+                                  <span className="block mt-0.5 normal-case tracking-normal text-[hsl(var(--primary))]">
+                                    Warteliste möglich
+                                  </span>
+                                )}
                               </div>
                             );
                           })()}

@@ -164,7 +164,7 @@ export default function Schedule() {
                             {Number(course.price).toFixed(2)} €
                           </p>
                           <p className={`text-xs ${full ? "text-destructive" : "text-muted-foreground"}`}>
-                            {course.direct_trainer_booking ? "" : full ? "Ausgebucht" : `${free} von ${course.max_participants} Plätzen frei`}
+                            {course.direct_trainer_booking ? "" : full ? (isPast ? "Ausgebucht" : "Ausgebucht · Warteliste möglich") : `${free} von ${course.max_participants} Plätzen frei`}
                           </p>
                           {notYetOpen && opensAt && (
                             <p className="text-xs text-muted-foreground">
