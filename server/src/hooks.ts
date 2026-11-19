@@ -126,3 +126,38 @@ on("courses", "afterUpdate", (_ctx, row, old) => {
     scheduleWaitlistCheck(row.id);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Voucher redemptions for bookings created in the backoffice ("Teilnehmer hinzufügen"
+// with a voucher code). Recorded server-side so it works for every role (staff and
+// trainers may not insert into voucher_redemptions) and is linked to the booking,
+// so the voucher overview shows what the code was used for.
+// ---------------------------------------------------------------------------
+import { randomUUID as __uuid } from "node:crypto";
+
+on("bookings", "afterInsert", async (ctx, row) => {
+  if (!row.voucher_id || row.payment_method !== "admin_grant") return;
+  const conn = ctx.conn!;
+  const exists = await q(conn, "SELECT 1 FROM voucher_redemptions WHERE booking_id = ?", [row.id]);
+  if (exists.length) return;
+  await q(
+    conn,
+    "INSERT INTO voucher_redemptions (id, voucher_id, user_id, order_id, booking_id, discount_amount, redeemed_at) VALUES (?, ?, ?, NULL, ?, ?, UTC_TIMESTAMP(6))",
+    [__uuid(), row.voucher_id, row.user_id, row.id, Number(row.discount_amount ?? 0)],
+  );
+  await q(conn, "UPDATE vouchers SET times_used = times_used + 1 WHERE id = ?", [row.voucher_id]);
+});
+
+// Older browser versions still insert the redemption themselves right after the booking
+// (without booking link) – ignore that duplicate instead of counting the voucher twice.
+on("voucher_redemptions", "beforeInsert", async (ctx, row) => {
+  if (ctx.service || row.booking_id || row.order_id) return;
+  const dup = await q(
+    ctx.conn!,
+    `SELECT 1 FROM voucher_redemptions r JOIN bookings b ON b.id = r.booking_id
+     WHERE r.voucher_id = ? AND r.user_id = ? AND b.payment_method = 'admin_grant'
+       AND r.redeemed_at > UTC_TIMESTAMP(6) - INTERVAL 2 MINUTE`,
+    [row.voucher_id, row.user_id],
+  );
+  if (dup.length) throw new DbError("Gutschein-Einlösung wurde bereits zur Buchung gespeichert.", "23505", 409);
+});

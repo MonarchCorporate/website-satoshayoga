@@ -79,7 +79,7 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
     (async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("id, status, amount_paid, payment_method, paid_with_card, user_id, order_id, orders(status, payment_method, order_number)")
+        .select("id, status, amount_paid, payment_method, paid_with_card, user_id, order_id, voucher_code, orders(status, payment_method, order_number)")
         .eq("course_id", course.id);
       const userIds = Array.from(new Set((data ?? []).map((b: any) => b.user_id)));
       let profiles: any[] = [];
@@ -193,7 +193,7 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
   const reloadBookings = async () => {
     const { data } = await supabase
       .from("bookings")
-      .select("id, status, amount_paid, payment_method, paid_with_card, user_id, order_id, orders(status, payment_method, order_number)")
+      .select("id, status, amount_paid, payment_method, paid_with_card, user_id, order_id, voucher_code, orders(status, payment_method, order_number)")
       .eq("course_id", course.id);
     const userIds = Array.from(new Set((data ?? []).map((b: any) => b.user_id)));
     let profiles: any[] = [];
@@ -269,17 +269,7 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
         return;
       }
 
-      // Record voucher redemption (trigger bumps times_used)
-      if (voucherId) {
-        const { error: redErr } = await supabase.from("voucher_redemptions").insert({
-          voucher_id: voucherId,
-          user_id: selectedUserId,
-          discount_amount: discountAmount,
-        });
-        if (redErr) {
-          console.warn("[voucher redemption] insert failed:", redErr.message);
-        }
-      }
+      // The voucher redemption (linked to this booking) is recorded by the server.
 
       toast.success("Teilnehmer hinzugefügt.");
       setAddOpen(false);
@@ -466,7 +456,15 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
                       )}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>
-                          {b.paid_with_card ? "Karte" : (b.payment_method === "invoice" ? "Rechnung" : (b.payment_method ?? "–"))}
+                          {b.paid_with_card
+                            ? "Karte"
+                            : b.voucher_code
+                            ? `Gutschein ${b.voucher_code}`
+                            : b.payment_method === "invoice"
+                            ? "Rechnung"
+                            : b.payment_method === "admin_grant"
+                            ? "Kostenlos (Backoffice)"
+                            : (b.payment_method ?? "–")}
                           {isUnpaid(b) && (
                             <span className="text-destructive font-medium">
                               {" "}· Zahlung offen{b.orders?.order_number ? ` (Best.-Nr. ${b.orders.order_number})` : ""}
