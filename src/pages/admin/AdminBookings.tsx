@@ -35,6 +35,7 @@ export default function AdminBookings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelSearch, setCancelSearch] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -42,16 +43,13 @@ export default function AdminBookings() {
     const fetchData = async () => {
       setError(null);
 
-      // Active bookings: the newest 200. Cancellations: all of them, so older ones
-      // can still be looked up (previously only cancellations among the newest
-      // 200 bookings were visible).
+      // All bookings – no fixed limit (previously only the newest 200 were loaded).
       const [activeRes, cancelledRes] = await Promise.all([
         supabase
           .from("bookings")
           .select("*")
           .neq("status", "cancelled")
-          .order("created_at", { ascending: false })
-          .limit(200),
+          .order("created_at", { ascending: false }),
         supabase
           .from("bookings")
           .select("*")
@@ -136,6 +134,24 @@ export default function AdminBookings() {
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     return { active, cancelledList };
   }, [bookings]);
+
+  const matches = (b: any, q: string) =>
+    [
+      b.profiles?.first_name,
+      b.profiles?.last_name,
+      `${b.profiles?.first_name ?? ""} ${b.profiles?.last_name ?? ""}`,
+      b.courses?.title,
+      b.order?.order_number,
+      b.courses?.start_time ? format(parseISO(b.courses.start_time), "d.M.yyyy dd.MM.yyyy", { locale: de }) : "",
+    ]
+      .filter(Boolean)
+      .some((v: string) => v.toLowerCase().includes(q));
+
+  const activeFiltered = useMemo(() => {
+    const q = activeSearch.trim().toLowerCase();
+    return q ? active.filter((b) => matches(b, q)) : active;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, activeSearch]);
 
   const cancelledFiltered = useMemo(() => {
     const q = cancelSearch.trim().toLowerCase();
@@ -306,11 +322,26 @@ export default function AdminBookings() {
             <TabsTrigger value="cancelled">Stornos ({cancelledList.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="active">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <Input
+                value={activeSearch}
+                onChange={(e) => setActiveSearch(e.target.value)}
+                placeholder="Buchungen durchsuchen (Name, Kurs, Datum, Bestellnr.)…"
+                className="max-w-sm"
+              />
+              <span className="text-sm text-muted-foreground">
+                {activeSearch.trim()
+                  ? `${activeFiltered.length} von ${active.length} Buchungen`
+                  : `Alle ${active.length} Buchungen, neueste zuerst`}
+              </span>
+            </div>
             <Card>
               <CardContent className="p-0">
-                {active.length === 0 ? (
-                  <p className="p-6 text-sm text-muted-foreground">Keine Buchungen vorhanden.</p>
-                ) : renderActive(active)}
+                {activeFiltered.length === 0 ? (
+                  <p className="p-6 text-sm text-muted-foreground">
+                    {active.length === 0 ? "Keine Buchungen vorhanden." : "Keine Buchungen zur Suche gefunden."}
+                  </p>
+                ) : renderActive(activeFiltered)}
               </CardContent>
             </Card>
           </TabsContent>

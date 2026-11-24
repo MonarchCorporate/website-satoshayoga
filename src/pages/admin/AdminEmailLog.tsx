@@ -90,7 +90,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 export default function AdminEmailLog() {
   const [rows, setRows] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rangeKey, setRangeKey] = useState("7d");
+  const [rangeKey, setRangeKey] = useState("all");
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE); // 0 = alle
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -104,8 +105,8 @@ export default function AdminEmailLog() {
     let query = supabase
       .from("email_send_log")
       .select("*", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      .order("created_at", { ascending: false });
+    if (pageSize > 0) query = query.range(page * pageSize, page * pageSize + pageSize - 1);
 
     if (range?.hours) {
       const since = new Date(Date.now() - range.hours * 3600 * 1000).toISOString();
@@ -124,7 +125,7 @@ export default function AdminEmailLog() {
   useEffect(() => {
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeKey, statusFilter, sourceFilter, page]);
+  }, [rangeKey, statusFilter, sourceFilter, page, pageSize]);
 
   useEffect(() => {
     setPage(0);
@@ -248,14 +249,25 @@ export default function AdminEmailLog() {
           </div>
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div>
-              Seite {page + 1} / {Math.max(1, Math.ceil(total / PAGE_SIZE))} — {total} Einträge
+            <div className="flex items-center gap-2">
+              <span>
+                {pageSize > 0
+                  ? `Seite ${page + 1} / ${Math.max(1, Math.ceil(total / pageSize))} — ${total} Einträge`
+                  : `Alle ${total} Einträge`}
+              </span>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(parseInt(v)); setPage(0); }}>
+                <SelectTrigger className="h-7 w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[50, 100, 500].map((n) => <SelectItem key={n} value={String(n)}>{n}/Seite</SelectItem>)}
+                  <SelectItem value="0">Alle</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                disabled={page === 0}
+                disabled={pageSize === 0 || page === 0}
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
               >
                 Zurück
@@ -263,7 +275,7 @@ export default function AdminEmailLog() {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={(page + 1) * PAGE_SIZE >= total}
+                disabled={pageSize === 0 || (page + 1) * pageSize >= total}
                 onClick={() => setPage((p) => p + 1)}
               >
                 Weiter

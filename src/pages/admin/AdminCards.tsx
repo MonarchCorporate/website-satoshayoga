@@ -92,14 +92,13 @@ export default function AdminCards() {
 
   const filteredCustomers = useMemo(() => {
     const q = customerSearch.toLowerCase().trim();
-    if (!q) return customers.slice(0, 50);
+    if (!q) return customers;
     return customers
       .filter((c) =>
         `${c.first_name ?? ""} ${c.last_name ?? ""} ${c.email ?? ""}`
           .toLowerCase()
           .includes(q),
-      )
-      .slice(0, 50);
+      );
   }, [customers, customerSearch]);
 
   const filteredCards = useMemo(() => {

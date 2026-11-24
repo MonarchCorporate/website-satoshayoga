@@ -284,8 +284,8 @@ export default function CourseDetailPanel({ open, onOpenChange, course, onEdit, 
   };
 
   const filteredCustomers = customerSearch.trim()
-    ? customers.filter(c => `${c.first_name ?? ""} ${c.last_name ?? ""} ${c.email ?? ""}`.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 50)
-    : customers.slice(0, 50);
+    ? customers.filter(c => `${c.first_name ?? ""} ${c.last_name ?? ""} ${c.email ?? ""}`.toLowerCase().includes(customerSearch.toLowerCase()))
+    : customers;
   const selectedCustomer = customers.find(c => c.user_id === selectedUserId);
 
 

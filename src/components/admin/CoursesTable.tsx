@@ -143,8 +143,9 @@ export default function CoursesTable({ scope, trainerId, title = "Kurse" }: Prop
     return r;
   }, [rows, search, filterTypes, filterTrainer, filterStatus, counts, sortKey, sortAsc]);
 
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  // pageSize 0 = alle Kurse auf einer Seite
+  const paged = pageSize > 0 ? filtered.slice((page - 1) * pageSize, page * pageSize) : filtered;
+  const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortAsc(!sortAsc);
@@ -202,6 +203,13 @@ export default function CoursesTable({ scope, trainerId, title = "Kurse" }: Prop
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Kurse suchen…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
+        <Button
+          variant="outline"
+          onClick={() => { setFrom(new Date(2020, 0, 1)); setTo(addMonths(new Date(), 36)); setPageSize(0); setPage(1); }}
+          title="Alle vergangenen und zukünftigen Kurse anzeigen"
+        >
+          Alle Termine
+        </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className="gap-2">
@@ -377,6 +385,7 @@ export default function CoursesTable({ scope, trainerId, title = "Kurse" }: Prop
               <SelectTrigger className="h-7 w-24"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {[10, 25, 50, 100].map(n => <SelectItem key={n} value={String(n)}>{n}/Seite</SelectItem>)}
+                <SelectItem value="0">Alle</SelectItem>
               </SelectContent>
             </Select>
           </div>
