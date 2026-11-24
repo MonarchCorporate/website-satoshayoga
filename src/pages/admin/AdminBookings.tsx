@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -33,6 +34,7 @@ export default function AdminBookings() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancelSearch, setCancelSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -40,11 +42,24 @@ export default function AdminBookings() {
     const fetchData = async () => {
       setError(null);
 
-      const { data: bks, error: bookingsError } = await supabase
-        .from("bookings")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
+      // Active bookings: the newest 200. Cancellations: all of them, so older ones
+      // can still be looked up (previously only cancellations among the newest
+      // 200 bookings were visible).
+      const [activeRes, cancelledRes] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select("*")
+          .neq("status", "cancelled")
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabase
+          .from("bookings")
+          .select("*")
+          .eq("status", "cancelled")
+          .order("updated_at", { ascending: false }),
+      ]);
+      const bookingsError = activeRes.error ?? cancelledRes.error;
+      const bks = [...(activeRes.data ?? []), ...(cancelledRes.data ?? [])];
 
       if (cancelled) return;
 
@@ -82,7 +97,7 @@ export default function AdminBookings() {
       if (orderIds.length) {
         const { data: orders } = await supabase
           .from("orders")
-          .select("id, order_number, payment_method, status, total, paypal_order_id")
+          .select("id, order_number, payment_method, status, total, payment_id")
           .in("id", orderIds);
         orderMap = Object.fromEntries((orders ?? []).map((o: any) => [o.id, o]));
       }
@@ -121,6 +136,23 @@ export default function AdminBookings() {
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     return { active, cancelledList };
   }, [bookings]);
+
+  const cancelledFiltered = useMemo(() => {
+    const q = cancelSearch.trim().toLowerCase();
+    if (!q) return cancelledList;
+    return cancelledList.filter((b) =>
+      [
+        b.profiles?.first_name,
+        b.profiles?.last_name,
+        `${b.profiles?.first_name ?? ""} ${b.profiles?.last_name ?? ""}`,
+        b.courses?.title,
+        b.order?.order_number,
+        b.courses?.start_time ? format(parseISO(b.courses.start_time), "d.M.yyyy dd.MM.yyyy", { locale: de }) : "",
+      ]
+        .filter(Boolean)
+        .some((v: string) => v.toLowerCase().includes(q)),
+    );
+  }, [cancelledList, cancelSearch]);
 
   const renderActive = (rows: any[]) => (
     <Table>
@@ -212,8 +244,8 @@ export default function AdminBookings() {
                 {b.order?.order_number && (
                   <div className="text-xs text-muted-foreground font-mono">{b.order.order_number}</div>
                 )}
-                {b.order?.paypal_order_id && (
-                  <div className="text-xs text-muted-foreground font-mono">PP: {b.order.paypal_order_id}</div>
+                {b.order?.payment_method === "paypal" && b.order?.payment_id && (
+                  <div className="text-xs text-muted-foreground font-mono">PP: {b.order.payment_id}</div>
                 )}
               </TableCell>
               <TableCell>
@@ -283,11 +315,26 @@ export default function AdminBookings() {
             </Card>
           </TabsContent>
           <TabsContent value="cancelled">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <Input
+                value={cancelSearch}
+                onChange={(e) => setCancelSearch(e.target.value)}
+                placeholder="Stornos durchsuchen (Name, Kurs, Datum, Bestellnr.)…"
+                className="max-w-sm"
+              />
+              <span className="text-sm text-muted-foreground">
+                {cancelSearch.trim()
+                  ? `${cancelledFiltered.length} von ${cancelledList.length} Stornos`
+                  : `Alle ${cancelledList.length} Stornos, neueste zuerst`}
+              </span>
+            </div>
             <Card>
               <CardContent className="p-0">
-                {cancelledList.length === 0 ? (
-                  <p className="p-6 text-sm text-muted-foreground">Keine Stornierungen vorhanden.</p>
-                ) : renderCancelled(cancelledList)}
+                {cancelledFiltered.length === 0 ? (
+                  <p className="p-6 text-sm text-muted-foreground">
+                    {cancelledList.length === 0 ? "Keine Stornierungen vorhanden." : "Keine Stornos zur Suche gefunden."}
+                  </p>
+                ) : renderCancelled(cancelledFiltered)}
               </CardContent>
             </Card>
           </TabsContent>
